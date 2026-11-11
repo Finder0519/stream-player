@@ -6,6 +6,7 @@
 
 - 输入播放 URL，选择播放器后点「启动播放」。
 - streamlink 路径可留空自动查找（常见安装位置 + `PATH`），也可手动指定。
+- ffmpeg 路径可留空自动查找（常见安装位置 + `PATH`），也可手动指定。
 - 可选代理：HTTP 或 SOCKS5，填写 `host:port`，可选用户名与密码。
 - 播放器候选按平台生成：macOS 为 IINA / VLC，Windows 为 PotPlayer / VLC，Linux 为 VLC。
 - 固定参数（不可配置）：
@@ -57,6 +58,24 @@ Fyne 依赖 cgo，必须启用 CGO（`CGO_ENABLED=1`，默认即是）。所需�
 | Windows | VLC | `%ProgramFiles%\VideoLAN\VLC\vlc.exe`、`%ProgramFiles(x86)%\VideoLAN\VLC\vlc.exe`，再退回 PATH 中的 `vlc.exe` | `--no-video-title-show` |
 | Linux | VLC | `/usr/bin/vlc`、`/usr/local/bin/vlc`、`/snap/bin/vlc`，再退回 PATH 中的 `vlc` | `--no-video-title-show` |
 
+### 4. ffmpeg
+
+程序按以下顺序查找 `ffmpeg`：
+
+1. 界面「ffmpeg 路径」中填写的路径（绝对路径，或 `PATH` 中的可执行文件名）
+2. 平台常见安装位置：
+   - macOS：`/opt/homebrew/bin/ffmpeg`、`/usr/local/bin/ffmpeg`、`~/.local/bin/ffmpeg`
+   - Linux：`/usr/bin/ffmpeg`、`/usr/local/bin/ffmpeg`、`/snap/bin/ffmpeg`、`~/.local/bin/ffmpeg`
+3. `PATH` 中的 `ffmpeg`
+
+安装方式：
+
+- macOS：`brew install ffmpeg`
+- Windows：`winget install ffmpeg`（或从 https://ffmpeg.org 下载后把 `bin` 目录加入 `PATH`）
+- Linux：发行版包管理器，如 `sudo apt install ffmpeg`
+
+ffmpeg 用于 `--ffmpeg-copyts` 以及合并分离的音视频轨；缺失时界面会弹窗并列出检查过的路径。
+
 ## 构建与运行
 
 ```bash
@@ -86,7 +105,7 @@ streamlink --player <播放器路径> --player-args "<上面的参数>" \
   <URL> best,720p,480p,worst
 ```
 
-- `--ffmpeg-ffmpeg` 传入程序自行探测到的 ffmpeg 绝对路径。streamlink 只按 `PATH` 查找 ffmpeg，而从 Finder/Dock 启动的 `.app` 不继承终端的 `PATH`；找不到 ffmpeg 时 streamlink 无法合并分离的音视频轨（HLS 会退化为 `hls` 而不是 `hls-multi`），表现为只有画面没有声音。
+- `--ffmpeg-ffmpeg` 传入界面「ffmpeg 路径」指定的路径，留空时使用程序自动探测到的 ffmpeg 绝对路径。streamlink 只按 `PATH` 查找 ffmpeg，而从 Finder/Dock 启动的 `.app` 不继承终端的 `PATH`；找不到 ffmpeg 时 streamlink 无法合并分离的音视频轨（HLS 会退化为 `hls` 而不是 `hls-multi`），表现为只有画面没有声音。
 - 代理 URL：HTTP 为 `http://host:port`，SOCKS5 为 `socks5://host:port`；用户名非空时写成 `scheme://user:password@host:port`，用户名和密码由 Go 的 `net/url` 负责转义。凭据只用于拼这条命令，不会写入日志或配置文件之外的地方；错误弹窗中的密码会被替换为 `***`。
 - streamlink 8.x 已弃用 `--https-proxy`（推荐只传 `--http-proxy`），当前实现按需求仍同时传入两个参数：功能正常，只会在 stderr 输出一条弃用警告。`socks5://` 表示 DNS 在本地解析，若需由代理服务器解析域名，streamlink 支持 `socks5h://`，但本程序按需求固定使用 `socks5://`。
 - URL 未写协议时会自动补 `https://`。
@@ -111,7 +130,8 @@ streamlink --player <播放器路径> --player-args "<上面的参数>" \
   "proxy_username": "",
   "proxy_password": "",
   "player": "vlc",
-  "streamlink_path": ""
+  "streamlink_path": "",
+  "ffmpeg_path": ""
 }
 ```
 

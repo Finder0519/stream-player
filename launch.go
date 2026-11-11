@@ -140,7 +140,7 @@ func streamlinkCandidates() []string {
 func findStreamlink(custom string) (string, error) {
 	custom = strings.TrimSpace(custom)
 	if custom != "" {
-		path, err := resolveStreamlink(custom)
+		path, err := resolveExecutable(custom)
 		if err != nil {
 			return "", fmt.Errorf("指定的 streamlink 路径不可用：%s\n%v", custom, err)
 		}
@@ -168,8 +168,8 @@ func findStreamlink(custom string) (string, error) {
 		"  Linux:   发行版包管理器，或 pipx install streamlink")
 }
 
-// resolveStreamlink 校验用户指定的路径；允许绝对路径或 PATH 中的可执行文件名。
-func resolveStreamlink(custom string) (string, error) {
+// resolveExecutable 校验用户指定的路径；允许绝对路径或 PATH 中的可执行文件名。
+func resolveExecutable(custom string) (string, error) {
 	if !filepath.IsAbs(custom) {
 		path, err := exec.LookPath(custom)
 		if err != nil {
@@ -207,9 +207,18 @@ func ffmpegCandidates() []string {
 	return candidates
 }
 
-// findFFmpeg 按“平台常见安装位置 → PATH”的顺序查找 ffmpeg。
+// findFFmpeg 按“用户指定路径 → 平台常见安装位置 → PATH”的顺序查找 ffmpeg。
 // 启动参数包含 --ffmpeg-copyts，缺少 ffmpeg 时 streamlink 无法正常播放。
-func findFFmpeg() (string, error) {
+func findFFmpeg(custom string) (string, error) {
+	custom = strings.TrimSpace(custom)
+	if custom != "" {
+		path, err := resolveExecutable(custom)
+		if err != nil {
+			return "", fmt.Errorf("指定的 ffmpeg 路径不可用：%s\n%v", custom, err)
+		}
+		return path, nil
+	}
+
 	candidates := ffmpegCandidates()
 	for _, candidate := range candidates {
 		if info, err := os.Stat(candidate); err == nil && !info.IsDir() {
@@ -224,7 +233,7 @@ func findFFmpeg() (string, error) {
 	checked := append(candidates, "PATH 中的 "+ffmpegBinary+"（当前 PATH："+os.Getenv("PATH")+"）")
 	return "", errors.New("未找到 ffmpeg 可执行文件。启动参数 --ffmpeg-copyts 依赖 ffmpeg，请先安装并确保它在 PATH 中。已检查：\n  " +
 		strings.Join(checked, "\n  ") +
-		"\n\n安装方式：\n" +
+		"\n可在界面的「ffmpeg 路径」中填写可执行文件绝对路径。\n\n安装方式：\n" +
 		"  Windows: winget install ffmpeg（或从 https://ffmpeg.org 下载后把 bin 目录加入 PATH）\n" +
 		"  macOS:   brew install ffmpeg\n" +
 		"  Linux:   发行版包管理器，如 sudo apt install ffmpeg")
@@ -239,8 +248,8 @@ func buildStreamlinkArgs(streamURL string, player Player, playerPath, ffmpegPath
 		"--ffmpeg-ffmpeg", ffmpegPath,
 		"--http-header", "User-Agent=" + userAgent,
 		"--ffmpeg-copyts",
-		"--stream-segment-threads", "4",
-		"--hls-live-edge", "4",
+		"--stream-segment-threads", "5",
+		"--hls-live-edge", "5",
 	}
 	if proxy != nil {
 		proxyURL := proxy.proxyURL()

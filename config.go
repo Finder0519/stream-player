@@ -24,6 +24,8 @@ type Config struct {
 	Player        string `json:"player"`
 	// StreamlinkPath 为空时按平台候选路径和 PATH 自动查找。
 	StreamlinkPath string `json:"streamlink_path"`
+	// FFmpegPath 为空时按平台候选路径和 PATH 自动查找。
+	FFmpegPath string `json:"ffmpeg_path"`
 }
 
 func defaultConfig() Config {

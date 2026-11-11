@@ -25,19 +25,20 @@ type launcherUI struct {
 
 	players []Player
 
-	urlEntry   *widget.Entry
-	proxyCheck *widget.Check
-	protocol   *widget.Select
-	hostEntry  *widget.Entry
-	portEntry  *widget.Entry
-	userEntry  *widget.Entry
-	passEntry  *widget.Entry
-	playerSel  *widget.Select
-	linkEntry  *widget.Entry
-	launchBtn  *widget.Button
-	stopBtn    *widget.Button
-	status     *widget.Label
-	configInfo *widget.Label
+	urlEntry    *widget.Entry
+	proxyCheck  *widget.Check
+	protocol    *widget.Select
+	hostEntry   *widget.Entry
+	portEntry   *widget.Entry
+	userEntry   *widget.Entry
+	passEntry   *widget.Entry
+	playerSel   *widget.Select
+	linkEntry   *widget.Entry
+	ffmpegEntry *widget.Entry
+	launchBtn   *widget.Button
+	stopBtn     *widget.Button
+	status      *widget.Label
+	configInfo  *widget.Label
 
 	proc *runningProcess
 
@@ -78,6 +79,9 @@ func newUI(w fyne.Window) *launcherUI {
 
 	u.linkEntry = widget.NewEntry()
 	u.linkEntry.SetPlaceHolder("留空自动检测，例如 /opt/homebrew/bin/streamlink")
+
+	u.ffmpegEntry = widget.NewEntry()
+	u.ffmpegEntry.SetPlaceHolder("留空自动检测，例如 /opt/homebrew/bin/ffmpeg")
 
 	u.launchBtn = widget.NewButton("启动播放", u.launch)
 	u.launchBtn.Importance = widget.HighImportance
@@ -181,6 +185,7 @@ func (u *launcherUI) content() fyne.CanvasObject {
 		widget.NewFormItem("播放地址", u.urlEntry),
 		widget.NewFormItem("播放器", u.playerSel),
 		widget.NewFormItem("streamlink 路径", u.linkEntry),
+		widget.NewFormItem("ffmpeg 路径", u.ffmpegEntry),
 	)
 	proxyForm := widget.NewForm(
 		widget.NewFormItem("协议", u.protocol),
@@ -216,6 +221,7 @@ func (u *launcherUI) applyConfig(cfg Config) {
 	u.userEntry.SetText(cfg.ProxyUsername)
 	u.passEntry.SetText(cfg.ProxyPassword)
 	u.linkEntry.SetText(cfg.StreamlinkPath)
+	u.ffmpegEntry.SetText(cfg.FFmpegPath)
 
 	if cfg.ProxyProtocol == proxyProtocolSOCKS5 {
 		u.protocol.SetSelected(protocolLabelSOCKS5)
@@ -270,6 +276,7 @@ func (u *launcherUI) snapshot() Config {
 		ProxyUsername:  u.userEntry.Text,
 		ProxyPassword:  u.passEntry.Text,
 		StreamlinkPath: u.linkEntry.Text,
+		FFmpegPath:     u.ffmpegEntry.Text,
 	}
 	if player, ok := u.selectedPlayer(); ok {
 		cfg.Player = player.ID
@@ -311,7 +318,7 @@ func (u *launcherUI) launch() {
 		return
 	}
 
-	ffmpegPath, err := findFFmpeg()
+	ffmpegPath, err := findFFmpeg(cfg.FFmpegPath)
 	if err != nil {
 		u.fail("缺少 ffmpeg", err.Error())
 		return
