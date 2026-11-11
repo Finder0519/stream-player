@@ -1,6 +1,7 @@
 package main
 
 import (
+	_ "embed"
 	"log"
 	"os"
 	"path/filepath"
@@ -8,6 +9,9 @@ import (
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
 )
+
+//go:embed Icon.png
+var trayIconPNG []byte
 
 func main() {
 	logFile, logErr := setupLogging()
@@ -21,9 +25,19 @@ func main() {
 	a := app.NewWithID("io.github.stream-player")
 	w := a.NewWindow("Stream Player")
 
-	w.SetContent(newUI(w).content())
+	ui := newUI(w)
+	w.SetContent(ui.content())
 	w.Resize(fyne.NewSize(680, 660))
 	w.CenterOnScreen()
+
+	alreadyRunning, stopInstance := listenInstance(ui.showWindow)
+	if alreadyRunning {
+		log.Printf("已有实例在运行，已通知其显示窗口")
+		return
+	}
+	defer stopInstance()
+
+	ui.setupTray(a, w)
 	w.ShowAndRun()
 }
 

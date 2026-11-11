@@ -55,22 +55,23 @@ jobs:
       - name: Install MinGW (Fyne 需要 C 编译器)
         run: choco install mingw -y --no-progress
 
-      - name: Build (嵌入图标与版本信息)
+      - name: Build x64 (嵌入图标与版本信息)
         shell: bash
         env:
           VERSION: ${{ needs.version.outputs.value }}
+          GOARCH: amd64
         run: |
           set -euo pipefail
           go run fyne.io/fyne/v2/cmd/fyne@v2.8.2 package -os windows \
             -release -appID io.github.stream-player \
             -appVersion "$VERSION" \
             -name "Stream Player" -icon Icon.png -src .
-          mv "Stream Player.exe" stream-player.exe
+          mv "Stream Player.exe" "stream-player-${VERSION}-windows-x64.exe"
 
       - uses: actions/upload-artifact@v4
         with:
           name: windows
-          path: stream-player.exe
+          path: stream-player-*-windows-x64.exe
           if-no-files-found: error
 
   macos:
@@ -85,12 +86,10 @@ jobs:
           go-version-file: go.mod
           cache: true
 
-      - name: Build universal binary
+      - name: Build arm64
         run: |
           mkdir -p build
-          go build -trimpath -ldflags "-s -w" -o build/stream-player-arm64 .
-          GOARCH=amd64 go build -trimpath -ldflags "-s -w" -o build/stream-player-amd64 .
-          lipo -create -output build/stream-player build/stream-player-arm64 build/stream-player-amd64
+          GOARCH=arm64 go build -trimpath -ldflags "-s -w" -o build/stream-player .
           lipo -info build/stream-player
 
       - name: Build .app bundle
@@ -132,12 +131,13 @@ jobs:
           EOF
 
           codesign --force --deep -s - "$APP"
-          hdiutil create -volname "Stream Player" -srcfolder "$APP" -ov -format UDZO -quiet dist/stream-player.dmg
+          hdiutil create -volname "Stream Player" -srcfolder "$APP" -ov -format UDZO -quiet \
+            "dist/stream-player-${VERSION}-macos-arm64.dmg"
 
       - uses: actions/upload-artifact@v4
         with:
           name: macos
-          path: dist/stream-player.dmg
+          path: dist/stream-player-*-macos-arm64.dmg
           if-no-files-found: error
 
   linux:
@@ -162,6 +162,8 @@ jobs:
         run: go build -trimpath -ldflags "-s -w" -o build/stream-player .
 
       - name: Package AppImage
+        env:
+          VERSION: ${{ needs.version.outputs.value }}
         run: |
           set -euo pipefail
           APPDIR=build/AppDir
@@ -199,12 +201,12 @@ jobs:
 
           mkdir -p dist
           ARCH=x86_64 ./appimagetool.AppImage --appimage-extract-and-run \
-            --no-appstream "$APPDIR" dist/Stream-Player-x86_64.AppImage
+            --no-appstream "$APPDIR" "dist/stream-player-${VERSION}-linux-x64.AppImage"
 
       - uses: actions/upload-artifact@v4
         with:
           name: linux
-          path: dist/Stream-Player-x86_64.AppImage
+          path: dist/stream-player-*-linux-x64.AppImage
           if-no-files-found: error
 
   publish:

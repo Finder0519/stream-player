@@ -8,6 +8,7 @@ import (
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
+	"fyne.io/fyne/v2/driver/desktop"
 	"fyne.io/fyne/v2/widget"
 )
 
@@ -18,6 +19,9 @@ const (
 
 type launcherUI struct {
 	win fyne.Window
+
+	app  fyne.App
+	tray desktop.App
 
 	players []Player
 
@@ -98,12 +102,76 @@ func newUI(w fyne.Window) *launcherUI {
 		u.setStatus(loadErr.Error())
 	}
 
+	return u
+}
+
+// setupTray 启用系统托盘。关闭窗口只隐藏窗口并保存配置，拉流在后台继续；
+// 左键点击托盘图标显示窗口，右键弹出菜单。
+func (u *launcherUI) setupTray(a fyne.App, w fyne.Window) {
+	da, ok := a.(desktop.App)
+	if !ok {
+		return
+	}
+	u.app = a
+	u.tray = da
+
+	da.SetSystemTrayIcon(fyne.NewStaticResource("icon.png", trayIconPNG))
+	// SetSystemTrayWindow 把左键绑定为显示窗口、右键绑定为弹出菜单，
+	// 同时会把关闭行为改成隐藏，因此这里重新设置以保留关闭时的配置保存。
+	da.SetSystemTrayWindow(w)
 	w.SetCloseIntercept(func() {
 		_ = saveConfig(u.snapshot())
-		w.Close()
+		w.Hide()
 	})
 
-	return u
+	u.refreshTrayMenu()
+
+	// 无论从哪个入口退出（托盘菜单、信号等），都先结束 streamlink，
+	// 避免它和播放器被 launchd 收养后继续在后台拉流。
+	a.Lifecycle().SetOnStopped(u.killRunning)
+}
+
+// refreshTrayMenu 按当前播放状态重建托盘菜单，「停止播放」仅在拉流时可用。
+func (u *launcherUI) refreshTrayMenu() {
+	if u.tray == nil {
+		return
+	}
+
+	stopItem := fyne.NewMenuItem("停止播放", u.stop)
+	stopItem.Disabled = u.proc == nil
+
+	quitItem := fyne.NewMenuItem("退出", u.quit)
+	quitItem.IsQuit = true // 告诉 Fyne 这就是退出项，避免再追加一个英文 Quit
+
+	u.tray.SetSystemTrayMenu(fyne.NewMenu("Stream Player",
+		fyne.NewMenuItem("打开窗口", u.showWindow),
+		stopItem,
+		fyne.NewMenuItemSeparator(),
+		quitItem,
+	))
+}
+
+func (u *launcherUI) showWindow() {
+	u.win.Show()
+	u.win.RequestFocus()
+}
+
+// quit 结束拉流、保存配置后退出程序。
+func (u *launcherUI) quit() {
+	if u.proc != nil {
+		_ = u.proc.stop()
+	}
+	_ = saveConfig(u.snapshot())
+	if u.app != nil {
+		u.app.Quit()
+	}
+}
+
+// killRunning 是退出时的兜底清理，由 Fyne 生命周期回调触发。
+func (u *launcherUI) killRunning() {
+	if u.proc != nil {
+		_ = u.proc.stop()
+	}
 }
 
 func (u *launcherUI) content() fyne.CanvasObject {
@@ -272,6 +340,7 @@ func (u *launcherUI) launch() {
 	u.proc = proc
 	u.launchBtn.Disable()
 	u.stopBtn.Enable()
+	u.refreshTrayMenu()
 	status := fmt.Sprintf("已启动 streamlink，播放器：%s。可点击「停止」结束本次播放。", player.Name)
 	if saveErr != nil {
 		log.Printf("配置保存失败：%v", saveErr)
@@ -288,6 +357,7 @@ func (u *launcherUI) launch() {
 			u.proc = nil
 			u.launchBtn.Enable()
 			u.stopBtn.Disable()
+			u.refreshTrayMenu()
 			if proc.stopped.Load() {
 				u.setStatus("已停止播放。")
 				return
@@ -303,7 +373,7 @@ func (u *launcherUI) launch() {
 }
 
 func (u *launcherUI) stop() {
-	if u.proc == nil {
+	if u.proc == nil || u.proc.stopped.Load() {
 		return
 	}
 	log.Printf("用户请求停止 streamlink")
