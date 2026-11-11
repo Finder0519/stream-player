@@ -29,6 +29,7 @@ type launcherUI struct {
 	userEntry  *widget.Entry
 	passEntry  *widget.Entry
 	playerSel  *widget.Select
+	linkEntry  *widget.Entry
 	launchBtn  *widget.Button
 	stopBtn    *widget.Button
 	status     *widget.Label
@@ -71,6 +72,9 @@ func newUI(w fyne.Window) *launcherUI {
 	}
 	u.playerSel = widget.NewSelect(names, nil)
 
+	u.linkEntry = widget.NewEntry()
+	u.linkEntry.SetPlaceHolder("留空自动检测，例如 /opt/homebrew/bin/streamlink")
+
 	u.launchBtn = widget.NewButton("启动播放", u.launch)
 	u.launchBtn.Importance = widget.HighImportance
 
@@ -108,6 +112,7 @@ func (u *launcherUI) content() fyne.CanvasObject {
 	urlForm := widget.NewForm(
 		widget.NewFormItem("播放地址", u.urlEntry),
 		widget.NewFormItem("播放器", u.playerSel),
+		widget.NewFormItem("streamlink 路径", u.linkEntry),
 	)
 	proxyForm := widget.NewForm(
 		widget.NewFormItem("协议", u.protocol),
@@ -142,6 +147,7 @@ func (u *launcherUI) applyConfig(cfg Config) {
 	u.portEntry.SetText(cfg.ProxyPort)
 	u.userEntry.SetText(cfg.ProxyUsername)
 	u.passEntry.SetText(cfg.ProxyPassword)
+	u.linkEntry.SetText(cfg.StreamlinkPath)
 
 	if cfg.ProxyProtocol == proxyProtocolSOCKS5 {
 		u.protocol.SetSelected(protocolLabelSOCKS5)
@@ -188,13 +194,14 @@ func (u *launcherUI) snapshot() Config {
 	}
 
 	cfg := Config{
-		URL:           u.urlEntry.Text,
-		UseProxy:      u.proxyCheck.Checked,
-		ProxyProtocol: protocol,
-		ProxyHost:     u.hostEntry.Text,
-		ProxyPort:     u.portEntry.Text,
-		ProxyUsername: u.userEntry.Text,
-		ProxyPassword: u.passEntry.Text,
+		URL:            u.urlEntry.Text,
+		UseProxy:       u.proxyCheck.Checked,
+		ProxyProtocol:  protocol,
+		ProxyHost:      u.hostEntry.Text,
+		ProxyPort:      u.portEntry.Text,
+		ProxyUsername:  u.userEntry.Text,
+		ProxyPassword:  u.passEntry.Text,
+		StreamlinkPath: u.linkEntry.Text,
 	}
 	if player, ok := u.selectedPlayer(); ok {
 		cfg.Player = player.ID
@@ -230,7 +237,7 @@ func (u *launcherUI) launch() {
 		return
 	}
 
-	streamlinkPath, err := findStreamlink()
+	streamlinkPath, err := findStreamlink(cfg.StreamlinkPath)
 	if err != nil {
 		u.fail("缺少 streamlink", err.Error())
 		return
@@ -254,7 +261,7 @@ func (u *launcherUI) launch() {
 	if proxy != nil {
 		proxyDesc = proxy.redactedURL()
 	}
-	log.Printf("启动播放：播放器=%s（%s） 代理=%s", player.Name, playerPath, proxyDesc)
+	log.Printf("启动播放：streamlink=%s 播放器=%s（%s） 代理=%s", streamlinkPath, player.Name, playerPath, proxyDesc)
 
 	u.proc = proc
 	u.launchBtn.Disable()

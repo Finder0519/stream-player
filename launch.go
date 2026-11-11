@@ -5,7 +5,10 @@ import (
 	"fmt"
 	"net"
 	"net/url"
+	"os"
 	"os/exec"
+	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -110,15 +113,77 @@ func buildProxyConfig(cfg Config) (*ProxyConfig, error) {
 	}, nil
 }
 
-func findStreamlink() (string, error) {
-	path, err := exec.LookPath(streamlinkBinary)
-	if err != nil {
-		return "", errors.New("未找到 streamlink 可执行文件。请先安装并确保它在 PATH 中：\n" +
-			"  Windows: pip install -U streamlink（或使用官方安装包）\n" +
-			"  macOS:   brew install streamlink\n" +
-			"  Linux:   发行版包管理器，或 pipx install streamlink")
+// streamlinkCandidates 列出各平台常见的 streamlink 安装位置。
+// 从 Finder/Dock 启动的 .app 不会继承终端的 PATH（launchd 默认只有
+// /usr/bin:/bin:/usr/sbin:/sbin），因此 Homebrew 等目录需要直接探测。
+func streamlinkCandidates() []string {
+	home, _ := os.UserHomeDir()
+
+	var candidates []string
+	switch runtime.GOOS {
+	case "darwin":
+		candidates = []string{"/opt/homebrew/bin/streamlink", "/usr/local/bin/streamlink"}
+	case "linux":
+		candidates = []string{"/usr/bin/streamlink", "/usr/local/bin/streamlink", "/snap/bin/streamlink"}
+	default:
+		return nil
 	}
-	return path, nil
+	if home != "" {
+		candidates = append(candidates, filepath.Join(home, ".local/bin/streamlink"))
+	}
+	return candidates
+}
+
+// findStreamlink 按“用户指定路径 → 平台常见安装位置 → PATH”的顺序查找 streamlink。
+func findStreamlink(custom string) (string, error) {
+	custom = strings.TrimSpace(custom)
+	if custom != "" {
+		path, err := resolveStreamlink(custom)
+		if err != nil {
+			return "", fmt.Errorf("指定的 streamlink 路径不可用：%s\n%v", custom, err)
+		}
+		return path, nil
+	}
+
+	candidates := streamlinkCandidates()
+	for _, candidate := range candidates {
+		if info, err := os.Stat(candidate); err == nil && !info.IsDir() {
+			return candidate, nil
+		}
+	}
+
+	if path, err := exec.LookPath(streamlinkBinary); err == nil {
+		return path, nil
+	}
+
+	checked := append(candidates, "PATH 中的 "+streamlinkBinary+"（当前 PATH："+os.Getenv("PATH")+"）")
+	return "", errors.New("未找到 streamlink 可执行文件。已检查：\n  " +
+		strings.Join(checked, "\n  ") +
+		"\n\n从 Finder/Dock 启动的应用不会继承终端的 PATH，Homebrew 安装的 streamlink 可能因此找不到。" +
+		"\n可在界面的「streamlink 路径」中填写可执行文件绝对路径，或先安装：\n" +
+		"  Windows: pip install -U streamlink（或使用官方安装包）\n" +
+		"  macOS:   brew install streamlink\n" +
+		"  Linux:   发行版包管理器，或 pipx install streamlink")
+}
+
+// resolveStreamlink 校验用户指定的路径；允许绝对路径或 PATH 中的可执行文件名。
+func resolveStreamlink(custom string) (string, error) {
+	if !filepath.IsAbs(custom) {
+		path, err := exec.LookPath(custom)
+		if err != nil {
+			return "", fmt.Errorf("未在 PATH 中找到 %q", custom)
+		}
+		return path, nil
+	}
+
+	info, err := os.Stat(custom)
+	if err != nil {
+		return "", err
+	}
+	if info.IsDir() {
+		return "", errors.New("这是一个目录，不是可执行文件")
+	}
+	return custom, nil
 }
 
 func buildStreamlinkArgs(streamURL string, player Player, playerPath string, proxy *ProxyConfig) []string {

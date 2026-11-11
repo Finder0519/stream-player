@@ -55,9 +55,17 @@ jobs:
       - name: Install MinGW (Fyne 需要 C 编译器)
         run: choco install mingw -y --no-progress
 
-      - name: Build
+      - name: Build (嵌入图标与版本信息)
         shell: bash
-        run: go build -trimpath -ldflags "-s -w -H windowsgui" -o stream-player.exe .
+        env:
+          VERSION: ${{ needs.version.outputs.value }}
+        run: |
+          set -euo pipefail
+          go run fyne.io/fyne/v2/cmd/fyne@v2.8.2 package -os windows \
+            -release -appID io.github.stream-player \
+            -appVersion "$VERSION" \
+            -name "Stream Player" -icon Icon.png -src .
+          mv "Stream Player.exe" stream-player.exe
 
       - uses: actions/upload-artifact@v4
         with:

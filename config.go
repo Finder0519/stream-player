@@ -22,6 +22,8 @@ type Config struct {
 	ProxyUsername string `json:"proxy_username"`
 	ProxyPassword string `json:"proxy_password"`
 	Player        string `json:"player"`
+	// StreamlinkPath 为空时按平台候选路径和 PATH 自动查找。
+	StreamlinkPath string `json:"streamlink_path"`
 }
 
 func defaultConfig() Config {

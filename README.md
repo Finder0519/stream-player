@@ -5,6 +5,7 @@
 ## 功能
 
 - 输入播放 URL，选择播放器后点「启动播放」。
+- streamlink 路径可留空自动查找（常见安装位置 + `PATH`），也可手动指定。
 - 可选代理：HTTP 或 SOCKS5，填写 `host:port`，可选用户名与密码。
 - 播放器候选按平台生成：macOS 为 IINA / VLC，Windows 为 PotPlayer / VLC，Linux 为 VLC。
 - 固定参数（不可配置）：
@@ -27,7 +28,17 @@ Fyne 依赖 cgo，必须启用 CGO（`CGO_ENABLED=1`，默认即是）。所需�
 
 ### 2. streamlink
 
-需要 `streamlink` 在 `PATH` 中：
+程序按以下顺序查找 `streamlink`：
+
+1. 界面「streamlink 路径」中填写的路径（绝对路径，或 `PATH` 中的可执行文件名）
+2. 平台常见安装位置：
+   - macOS：`/opt/homebrew/bin/streamlink`、`/usr/local/bin/streamlink`、`~/.local/bin/streamlink`
+   - Linux：`/usr/bin/streamlink`、`/usr/local/bin/streamlink`、`/snap/bin/streamlink`、`~/.local/bin/streamlink`
+3. `PATH` 中的 `streamlink`
+
+注意：从 Finder/Dock 启动的 `.app` 不会继承终端的 `PATH`（launchd 默认只有 `/usr/bin:/bin:/usr/sbin:/sbin`），所以 Homebrew 安装的 streamlink 在终端里能查到、双击应用却找不到。此时上面的固定候选路径会自动兜底；若 streamlink 装在其它位置（如 pyenv/conda 环境），请在界面中填写绝对路径。
+
+安装方式：
 
 - macOS：`brew install streamlink`
 - Windows：`pip install -U streamlink`（或用官方安装包）
@@ -96,7 +107,8 @@ streamlink --player <播放器路径> --player-args "<上面的参数>" \
   "proxy_port": "7890",
   "proxy_username": "",
   "proxy_password": "",
-  "player": "vlc"
+  "player": "vlc",
+  "streamlink_path": ""
 }
 ```
 

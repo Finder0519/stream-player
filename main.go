@@ -19,10 +19,11 @@ func main() {
 	}
 
 	a := app.NewWithID("io.github.stream-player")
+	applyPreferredFont(a)
 	w := a.NewWindow("Stream Player")
 
 	w.SetContent(newUI(w).content())
-	w.Resize(fyne.NewSize(560, 660))
+	w.Resize(fyne.NewSize(680, 660))
 	w.CenterOnScreen()
 	w.ShowAndRun()
 }
