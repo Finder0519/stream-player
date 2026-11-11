@@ -128,6 +128,9 @@ func (u *launcherUI) setupTray(a fyne.App, w fyne.Window) {
 		w.Hide()
 	})
 
+	// macOS 上窗口隐藏后点击程序坞图标同样唤回窗口，与左键点击托盘图标一致。
+	installDockReopen(u.showWindow)
+
 	u.refreshTrayMenu()
 
 	// 无论从哪个入口退出（托盘菜单、信号等），都先结束 streamlink，
