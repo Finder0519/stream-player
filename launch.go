@@ -191,6 +191,9 @@ func buildStreamlinkArgs(streamURL string, player Player, playerPath string, pro
 		"--player", playerPath,
 		"--player-args", player.Args,
 		"--http-header", "User-Agent=" + userAgent,
+		"--ffmpeg-copyts",
+		"--stream-segment-threads", "4",
+		"--hls-live-edge", "4",
 	}
 	if proxy != nil {
 		proxyURL := proxy.proxyURL()
