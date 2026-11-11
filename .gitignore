@@ -7,7 +7,7 @@
 *.dll
 *.so
 *.dylib
-./stream-player
+stream-player
 
 
 # Test binary, built with `go test -c`

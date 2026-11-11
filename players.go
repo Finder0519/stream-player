@@ -39,13 +39,14 @@ func darwinPlayers() []Player {
 	if home != "" {
 		iina = append(iina, filepath.Join(home, "Applications/IINA.app/Contents/MacOS/iina-cli"))
 	}
-	// streamlink 官方文档要求 IINA 使用 --stdin 参数（stdin 管道传输）。
+	// IINA 需要通过 --stdin 从 stdin 管道读取。stdin 模式下 {playerinput} 会被
+	// streamlink 替换为 "-"，与后面的 "-stdin" 拼成 "--stdin"。
 	iina = append(iina, "iina-cli", "iina")
 
 	vlc := []string{"/Applications/VLC.app/Contents/MacOS/VLC", "vlc"}
 
 	return []Player{
-		{ID: "iina", Name: "IINA", Args: "--stdin", candidates: iina},
+		{ID: "iina", Name: "IINA", Args: "{playerinput}-stdin", candidates: iina},
 		{ID: "vlc", Name: "VLC", Args: "--no-video-title-show", candidates: vlc},
 	}
 }

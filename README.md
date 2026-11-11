@@ -49,7 +49,7 @@ Fyne 依赖 cgo，必须启用 CGO（`CGO_ENABLED=1`，默认即是）。所需�
 
 | 平台 | 播放器 | 默认可执行文件 | `--player-args` |
 | --- | --- | --- | --- |
-| macOS | IINA | `/Applications/IINA.app/Contents/MacOS/iina-cli`、`~/Applications/IINA.app/Contents/MacOS/iina-cli`，再退回 PATH 中的 `iina-cli` / `iina` | `--stdin`（streamlink 官方要求 IINA 通过 stdin 管道播放） |
+| macOS | IINA | `/Applications/IINA.app/Contents/MacOS/iina-cli`、`~/Applications/IINA.app/Contents/MacOS/iina-cli`，再退回 PATH 中的 `iina-cli` / `iina` | `{playerinput}-stdin`（stdin 模式下 `{playerinput}` 为 `-`，拼接后即 `--stdin`，IINA 从 stdin 管道播放） |
 | macOS | VLC | `/Applications/VLC.app/Contents/MacOS/VLC`，再退回 PATH 中的 `vlc` | `--no-video-title-show` |
 | Windows | PotPlayer | `%ProgramFiles%\DAUM\PotPlayer\PotPlayerMini64.exe`（或 `PotPlayerMini.exe`），以及 `%ProgramFiles(x86)%` 下的同名文件，再退回 PATH | `{playerinput}`（streamlink 在 stdin 模式下传入 `-`，PotPlayer 用 `-` 表示从标准输入播放） |
 | Windows | VLC | `%ProgramFiles%\VideoLAN\VLC\vlc.exe`、`%ProgramFiles(x86)%\VideoLAN\VLC\vlc.exe`，再退回 PATH 中的 `vlc.exe` | `--no-video-title-show` |
