@@ -1,0 +1,219 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  CGO_ENABLED: "1"
+
+jobs:
+  version:
+    name: Calculate version
+    runs-on: ubuntu-latest
+    outputs:
+      value: ${{ steps.next.outputs.value }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Calculate next version
+        id: next
+        run: |
+          set -euo pipefail
+          latest=$(git tag -l --sort=-v:refname | grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+$' | head -n1 || true)
+          if [ -z "$latest" ]; then
+            next="1.0.0"
+          else
+            IFS='.' read -r major minor patch <<< "${latest#v}"
+            next="$major.$minor.$((patch + 1))"
+          fi
+          echo "value=$next" >> "$GITHUB_OUTPUT"
+          echo "本次发布版本 v$next（上一个 tag：${latest:-无}）"
+
+  windows:
+    name: Windows (exe)
+    needs: version
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Install MinGW (Fyne 需要 C 编译器)
+        run: choco install mingw -y --no-progress
+
+      - name: Build
+        shell: bash
+        run: go build -trimpath -ldflags "-s -w -H windowsgui" -o stream-player.exe .
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows
+          path: stream-player.exe
+          if-no-files-found: error
+
+  macos:
+    name: macOS (dmg)
+    needs: version
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Build universal binary
+        run: |
+          mkdir -p build
+          go build -trimpath -ldflags "-s -w" -o build/stream-player-arm64 .
+          GOARCH=amd64 go build -trimpath -ldflags "-s -w" -o build/stream-player-amd64 .
+          lipo -create -output build/stream-player build/stream-player-arm64 build/stream-player-amd64
+          lipo -info build/stream-player
+
+      - name: Build .app bundle
+        env:
+          VERSION: ${{ needs.version.outputs.value }}
+        run: |
+          set -euo pipefail
+          APP="build/Stream Player.app"
+          mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources" dist
+          cp build/stream-player "$APP/Contents/MacOS/stream-player"
+          printf 'APPL????' > "$APP/Contents/PkgInfo"
+
+          ICONSET=build/AppIcon.iconset
+          rm -rf "$ICONSET"
+          mkdir -p "$ICONSET"
+          for size in 16 32 128 256 512; do
+            sips -z "$size" "$size" Icon.png --out "$ICONSET/icon_${size}x${size}.png" >/dev/null
+            sips -z "$((size * 2))" "$((size * 2))" Icon.png --out "$ICONSET/icon_${size}x${size}@2x.png" >/dev/null
+          done
+          iconutil -c icns "$ICONSET" -o "$APP/Contents/Resources/AppIcon.icns"
+
+          cat > "$APP/Contents/Info.plist" <<EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>CFBundleExecutable</key><string>stream-player</string>
+            <key>CFBundleIdentifier</key><string>io.github.stream-player</string>
+            <key>CFBundleName</key><string>Stream Player</string>
+            <key>CFBundleDisplayName</key><string>Stream Player</string>
+            <key>CFBundlePackageType</key><string>APPL</string>
+            <key>CFBundleIconFile</key><string>AppIcon</string>
+            <key>CFBundleShortVersionString</key><string>${VERSION}</string>
+            <key>CFBundleVersion</key><string>${VERSION}</string>
+            <key>LSMinimumSystemVersion</key><string>11.0</string>
+            <key>NSHighResolutionCapable</key><true/>
+          </dict>
+          </plist>
+          EOF
+
+          codesign --force --deep -s - "$APP"
+          hdiutil create -volname "Stream Player" -srcfolder "$APP" -ov -format UDZO -quiet dist/stream-player.dmg
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos
+          path: dist/stream-player.dmg
+          if-no-files-found: error
+
+  linux:
+    name: Linux (AppImage)
+    needs: version
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc libgl1-mesa-dev xorg-dev libxkbcommon-dev imagemagick
+
+      - name: Build
+        run: go build -trimpath -ldflags "-s -w" -o build/stream-player .
+
+      - name: Package AppImage
+        run: |
+          set -euo pipefail
+          APPDIR=build/AppDir
+          mkdir -p "$APPDIR/usr/bin" \
+                   "$APPDIR/usr/share/applications" \
+                   "$APPDIR/usr/share/icons/hicolor/256x256/apps"
+
+          cp build/stream-player "$APPDIR/usr/bin/stream-player"
+
+          cat > "$APPDIR/AppRun" <<'EOF'
+          #!/bin/sh
+          HERE="$(dirname "$(readlink -f "$0")")"
+          exec "$HERE/usr/bin/stream-player" "$@"
+          EOF
+          chmod +x "$APPDIR/AppRun"
+
+          cat > "$APPDIR/stream-player.desktop" <<'EOF'
+          [Desktop Entry]
+          Type=Application
+          Name=Stream Player
+          Comment=Stream player launcher
+          Exec=stream-player
+          Icon=stream-player
+          Categories=AudioVideo;Player;
+          Terminal=false
+          EOF
+
+          convert Icon.png -resize 256x256! "$APPDIR/stream-player.png"
+          cp "$APPDIR/stream-player.png" "$APPDIR/usr/share/icons/hicolor/256x256/apps/stream-player.png"
+          cp "$APPDIR/stream-player.desktop" "$APPDIR/usr/share/applications/"
+
+          curl -fL --retry 3 -o appimagetool.AppImage \
+            https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage
+          chmod +x appimagetool.AppImage
+
+          mkdir -p dist
+          ARCH=x86_64 ./appimagetool.AppImage --appimage-extract-and-run \
+            --no-appstream "$APPDIR" dist/Stream-Player-x86_64.AppImage
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux
+          path: dist/Stream-Player-x86_64.AppImage
+          if-no-files-found: error
+
+  publish:
+    name: Publish release
+    needs: [version, windows, macos, linux]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: List release files
+        run: ls -lh dist
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ needs.version.outputs.value }}
+          name: v${{ needs.version.outputs.value }}
+          files: dist/*
+          generate_release_notes: true
