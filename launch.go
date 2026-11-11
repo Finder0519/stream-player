@@ -230,10 +230,13 @@ func findFFmpeg() (string, error) {
 		"  Linux:   发行版包管理器，如 sudo apt install ffmpeg")
 }
 
-func buildStreamlinkArgs(streamURL string, player Player, playerPath string, proxy *ProxyConfig) []string {
+func buildStreamlinkArgs(streamURL string, player Player, playerPath, ffmpegPath string, proxy *ProxyConfig) []string {
 	args := []string{
 		"--player", playerPath,
 		"--player-args", player.Args,
+		// 显式指定 ffmpeg：streamlink 自己只按 PATH 查找，从 Finder 启动的 .app
+		// 不继承终端的 PATH，找不到 ffmpeg 时无法合并分离的音视频轨（无声音）。
+		"--ffmpeg-ffmpeg", ffmpegPath,
 		"--http-header", "User-Agent=" + userAgent,
 		"--ffmpeg-copyts",
 		"--stream-segment-threads", "4",

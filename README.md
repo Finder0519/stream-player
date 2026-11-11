@@ -79,11 +79,13 @@ Fyne 需要 cgo，交叉编译必须准备目标平台的 C 工具链，因此�
 
 ```
 streamlink --player <播放器路径> --player-args "<上面的参数>" \
+  --ffmpeg-ffmpeg <ffmpeg路径> \
   --http-header "User-Agent=<固定 UA>" \
   [--http-proxy <代理URL>] \
   <URL> best,720p,480p,worst
 ```
 
+- `--ffmpeg-ffmpeg` 传入程序自行探测到的 ffmpeg 绝对路径。streamlink 只按 `PATH` 查找 ffmpeg，而从 Finder/Dock 启动的 `.app` 不继承终端的 `PATH`；找不到 ffmpeg 时 streamlink 无法合并分离的音视频轨（HLS 会退化为 `hls` 而不是 `hls-multi`），表现为只有画面没有声音。
 - 代理 URL：HTTP 为 `http://host:port`，SOCKS5 为 `socks5://host:port`；用户名非空时写成 `scheme://user:password@host:port`，用户名和密码由 Go 的 `net/url` 负责转义。凭据只用于拼这条命令，不会写入日志或配置文件之外的地方；错误弹窗中的密码会被替换为 `***`。
 - streamlink 8.x 已弃用 `--https-proxy`（推荐只传 `--http-proxy`），当前实现按需求仍同时传入两个参数：功能正常，只会在 stderr 输出一条弃用警告。`socks5://` 表示 DNS 在本地解析，若需由代理服务器解析域名，streamlink 支持 `socks5h://`，但本程序按需求固定使用 `socks5://`。
 - URL 未写协议时会自动补 `https://`。

@@ -257,7 +257,7 @@ func (u *launcherUI) launch() {
 
 	saveErr := saveConfig(cfg)
 
-	proc, err := startStreamlink(streamlinkPath, buildStreamlinkArgs(streamURL, player, playerPath, proxy))
+	proc, err := startStreamlink(streamlinkPath, buildStreamlinkArgs(streamURL, player, playerPath, ffmpegPath, proxy))
 	if err != nil {
 		u.fail("启动失败", redact(err.Error(), proxy))
 		return
