@@ -19,7 +19,6 @@ func main() {
 	}
 
 	a := app.NewWithID("io.github.stream-player")
-	applyPreferredFont(a)
 	w := a.NewWindow("Stream Player")
 
 	w.SetContent(newUI(w).content())

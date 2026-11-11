@@ -122,7 +122,7 @@ func (u *launcherUI) content() fyne.CanvasObject {
 		widget.NewFormItem("密码", u.passEntry),
 	)
 
-	fixed := widget.NewLabel("固定参数：质量 " + qualityOptions + "。")
+	fixed := widget.NewLabel("固定参数：质量 " + qualityOptions + "，使用固定 Chrome User-Agent。")
 	fixed.Wrapping = fyne.TextWrapWord
 
 	body := container.NewVBox(
@@ -243,6 +243,12 @@ func (u *launcherUI) launch() {
 		return
 	}
 
+	ffmpegPath, err := findFFmpeg()
+	if err != nil {
+		u.fail("缺少 ffmpeg", err.Error())
+		return
+	}
+
 	playerPath, err := player.Resolve()
 	if err != nil {
 		u.fail("缺少播放器", err.Error())
@@ -261,7 +267,7 @@ func (u *launcherUI) launch() {
 	if proxy != nil {
 		proxyDesc = proxy.redactedURL()
 	}
-	log.Printf("启动播放：streamlink=%s 播放器=%s（%s） 代理=%s", streamlinkPath, player.Name, playerPath, proxyDesc)
+	log.Printf("启动播放：streamlink=%s ffmpeg=%s 播放器=%s（%s） 代理=%s", streamlinkPath, ffmpegPath, player.Name, playerPath, proxyDesc)
 
 	u.proc = proc
 	u.launchBtn.Disable()

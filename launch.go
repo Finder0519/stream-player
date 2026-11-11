@@ -17,10 +17,13 @@ import (
 
 const (
 	// 固定 UA，不做配置项。
+	userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36"
+
 	// 固定播放质量优先级。
 	qualityOptions = "best,720p,480p,worst"
 
 	streamlinkBinary = "streamlink"
+	ffmpegBinary     = "ffmpeg"
 )
 
 // ProxyConfig 是已校验的代理设置。
@@ -185,10 +188,53 @@ func resolveStreamlink(custom string) (string, error) {
 	return custom, nil
 }
 
+// ffmpegCandidates 列出各平台常见的 ffmpeg 安装位置，原因同 streamlinkCandidates。
+func ffmpegCandidates() []string {
+	home, _ := os.UserHomeDir()
+
+	var candidates []string
+	switch runtime.GOOS {
+	case "darwin":
+		candidates = []string{"/opt/homebrew/bin/ffmpeg", "/usr/local/bin/ffmpeg"}
+	case "linux":
+		candidates = []string{"/usr/bin/ffmpeg", "/usr/local/bin/ffmpeg", "/snap/bin/ffmpeg"}
+	default:
+		return nil
+	}
+	if home != "" {
+		candidates = append(candidates, filepath.Join(home, ".local/bin/ffmpeg"))
+	}
+	return candidates
+}
+
+// findFFmpeg 按“平台常见安装位置 → PATH”的顺序查找 ffmpeg。
+// 启动参数包含 --ffmpeg-copyts，缺少 ffmpeg 时 streamlink 无法正常播放。
+func findFFmpeg() (string, error) {
+	candidates := ffmpegCandidates()
+	for _, candidate := range candidates {
+		if info, err := os.Stat(candidate); err == nil && !info.IsDir() {
+			return candidate, nil
+		}
+	}
+
+	if path, err := exec.LookPath(ffmpegBinary); err == nil {
+		return path, nil
+	}
+
+	checked := append(candidates, "PATH 中的 "+ffmpegBinary+"（当前 PATH："+os.Getenv("PATH")+"）")
+	return "", errors.New("未找到 ffmpeg 可执行文件。启动参数 --ffmpeg-copyts 依赖 ffmpeg，请先安装并确保它在 PATH 中。已检查：\n  " +
+		strings.Join(checked, "\n  ") +
+		"\n\n安装方式：\n" +
+		"  Windows: winget install ffmpeg（或从 https://ffmpeg.org 下载后把 bin 目录加入 PATH）\n" +
+		"  macOS:   brew install ffmpeg\n" +
+		"  Linux:   发行版包管理器，如 sudo apt install ffmpeg")
+}
+
 func buildStreamlinkArgs(streamURL string, player Player, playerPath string, proxy *ProxyConfig) []string {
 	args := []string{
 		"--player", playerPath,
 		"--player-args", player.Args,
+		"--http-header", "User-Agent=" + userAgent,
 		"--ffmpeg-copyts",
 		"--stream-segment-threads", "4",
 		"--hls-live-edge", "4",
