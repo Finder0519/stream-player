@@ -122,7 +122,7 @@ func (u *launcherUI) content() fyne.CanvasObject {
 		widget.NewFormItem("密码", u.passEntry),
 	)
 
-	fixed := widget.NewLabel("固定参数：质量 " + qualityOptions + "，使用固定 Chrome User-Agent。")
+	fixed := widget.NewLabel("固定参数：质量 " + qualityOptions + "。")
 	fixed.Wrapping = fyne.TextWrapWord
 
 	body := container.NewVBox(

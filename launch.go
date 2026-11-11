@@ -17,7 +17,6 @@ import (
 
 const (
 	// 固定 UA，不做配置项。
-	userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36"
 	// 固定播放质量优先级。
 	qualityOptions = "best,720p,480p,worst"
 
@@ -190,7 +189,6 @@ func buildStreamlinkArgs(streamURL string, player Player, playerPath string, pro
 	args := []string{
 		"--player", playerPath,
 		"--player-args", player.Args,
-		"--http-header", "User-Agent=" + userAgent,
 		"--ffmpeg-copyts",
 		"--stream-segment-threads", "4",
 		"--hls-live-edge", "4",

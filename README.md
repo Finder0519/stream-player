@@ -9,7 +9,6 @@
 - 可选代理：HTTP 或 SOCKS5，填写 `host:port`，可选用户名与密码。
 - 播放器候选按平台生成：macOS 为 IINA / VLC，Windows 为 PotPlayer / VLC，Linux 为 VLC。
 - 固定参数（不可配置）：
-  - User-Agent：`Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36`
   - 质量：`best,720p,480p,worst`（streamlink 按顺序回退）
 - 配置自动保存并在下次启动时回填。
 - streamlink 缺失、播放器缺失、代理参数非法、streamlink 异常退出时都会在界面弹窗给出可读错误，并附上 stderr 末尾内容。
@@ -79,7 +78,6 @@ Fyne 需要 cgo，交叉编译必须准备目标平台的 C 工具链，因此�
 
 ```
 streamlink --player <播放器路径> --player-args "<上面的参数>" \
-  --http-header "User-Agent=<固定 UA>" \
   [--http-proxy <代理URL>] \
   <URL> best,720p,480p,worst
 ```
