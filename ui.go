@@ -5,6 +5,7 @@ import (
 	"log"
 	"runtime"
 	"strings"
+	"time"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
@@ -40,6 +41,9 @@ type launcherUI struct {
 	stopBtn     *widget.Button
 	status      *widget.Label
 	configInfo  *widget.Label
+	logTitle    *widget.Label
+	logGrid     *widget.TextGrid
+	logScroll   *container.Scroll
 
 	proc *runningProcess
 
@@ -197,16 +201,22 @@ func (u *launcherUI) content() fyne.CanvasObject {
 		widget.NewFormItem("", u.linkEntry),
 		widget.NewFormItem("", u.ffmpegEntry),
 	)
+	// 主机与端口、用户名与密码各占一行，减少表单高度占用。
 	u.proxyForm = widget.NewForm(
 		widget.NewFormItem("", u.protocol),
-		widget.NewFormItem("", u.hostEntry),
-		widget.NewFormItem("", u.portEntry),
-		widget.NewFormItem("", u.userEntry),
-		widget.NewFormItem("", u.passEntry),
+		widget.NewFormItem("", container.NewGridWithColumns(2, u.hostEntry, u.portEntry)),
+		widget.NewFormItem("", container.NewGridWithColumns(2, u.userEntry, u.passEntry)),
 	)
 
 	u.fixed = widget.NewLabel("")
 	u.fixed.Wrapping = fyne.TextWrapWord
+
+	u.logTitle = widget.NewLabelWithStyle("", fyne.TextAlignLeading, fyne.TextStyle{Bold: true})
+	u.logGrid = widget.NewTextGrid()
+	// 关闭 TextGrid 自带滚动，由外层 Scroll 统一滚动，便于按需自动跟随末尾。
+	u.logGrid.Scroll = fyne.ScrollNone
+	u.logScroll = container.NewScroll(u.logGrid)
+	u.logScroll.SetMinSize(fyne.NewSize(200, 120))
 
 	langSel := widget.NewSelect([]string{langNameZh, langNameEn}, func(name string) {
 		u.switchLanguage(languageFromName(name))
@@ -215,7 +225,7 @@ func (u *launcherUI) content() fyne.CanvasObject {
 
 	u.applyTexts()
 
-	body := container.NewVBox(
+	form := container.NewVBox(
 		container.NewBorder(nil, nil, nil, langSel, u.header),
 		u.urlForm,
 		widget.NewSeparator(),
@@ -225,10 +235,15 @@ func (u *launcherUI) content() fyne.CanvasObject {
 		u.fixed,
 		container.NewGridWithColumns(2, u.launchBtn, u.stopBtn),
 		u.status,
-		widget.NewSeparator(),
 		u.configInfo,
 	)
-	return container.NewPadded(body)
+	// 日志占用窗口剩余高度，固定在界面最下方。
+	logPane := container.NewBorder(
+		container.NewVBox(widget.NewSeparator(), u.logTitle),
+		nil, nil, nil,
+		u.logScroll,
+	)
+	return container.NewPadded(container.NewBorder(form, nil, nil, nil, logPane))
 }
 
 // applyTexts 按当前语言更新所有静态界面文字。
@@ -245,9 +260,10 @@ func (u *launcherUI) applyTexts() {
 	u.stopBtn.SetText(t(keyBtnStop))
 
 	setFormTexts(u.urlForm, t(keyLabelURL), t(keyLabelPlayer), t(keyLabelStreamlink), t(keyLabelFFmpeg))
-	setFormTexts(u.proxyForm, t(keyLabelProtocol), t(keyLabelHost), t(keyLabelPort), t(keyLabelUsername), t(keyLabelPassword))
+	setFormTexts(u.proxyForm, t(keyLabelProtocol), t(keyLabelHostPort), t(keyLabelUserPass))
 
 	u.fixed.SetText(t(keyFixedParams, qualityOptions))
+	u.logTitle.SetText(t(keyLogTitle))
 
 	path, err := configPath()
 	if err != nil {
@@ -418,6 +434,8 @@ func (u *launcherUI) launch() {
 
 	u.proc = proc
 	u.runningPlayer = player.Name
+	u.logGrid.SetText("")
+	u.logScroll.ScrollToTop()
 	u.launchBtn.Disable()
 	u.stopBtn.Enable()
 	u.refreshTrayMenu()
@@ -428,8 +446,12 @@ func (u *launcherUI) launch() {
 	}
 	u.setStatus(status)
 
+	logDone := make(chan struct{})
+	go u.followLog(proc, proxy, logDone)
+
 	go func() {
 		waitErr := proc.cmd.Wait()
+		close(logDone)
 		output := redact(proc.output.String(), proxy)
 		log.Printf("streamlink 已退出：%v\n%s", waitErr, output)
 
@@ -450,6 +472,39 @@ func (u *launcherUI) launch() {
 			u.setStatus(t(keyStatusFinished))
 		})
 	}()
+}
+
+// followLog 周期性把 streamlink 的最新输出同步到界面日志区。
+// done 关闭后补一次刷新再退出，保证进程退出前的输出也能显示出来。
+func (u *launcherUI) followLog(proc *runningProcess, proxy *ProxyConfig, done <-chan struct{}) {
+	ticker := time.NewTicker(300 * time.Millisecond)
+	defer ticker.Stop()
+
+	var last string
+	for {
+		select {
+		case <-ticker.C:
+			text := redact(proc.output.String(), proxy)
+			if text != last {
+				last = text
+				u.setLog(text)
+			}
+		case <-done:
+			u.setLog(redact(proc.output.String(), proxy))
+			return
+		}
+	}
+}
+
+// setLog 更新日志区文字；用户已向上滚动查看历史时不再强制跳到底部。
+func (u *launcherUI) setLog(text string) {
+	fyne.Do(func() {
+		atBottom := u.logScroll.Offset.Y+u.logScroll.Size().Height >= u.logScroll.Content.Size().Height-4
+		u.logGrid.SetText(text)
+		if atBottom {
+			u.logScroll.ScrollToBottom()
+		}
+	})
 }
 
 func (u *launcherUI) stop() {

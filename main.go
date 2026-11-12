@@ -27,7 +27,7 @@ func main() {
 
 	ui := newUI(w)
 	w.SetContent(ui.content())
-	w.Resize(fyne.NewSize(680, 700))
+	w.Resize(fyne.NewSize(680, 800))
 	w.CenterOnScreen()
 
 	alreadyRunning, stopInstance := listenInstance(ui.showWindow)

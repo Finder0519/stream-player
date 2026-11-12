@@ -65,15 +65,14 @@ const (
 	keyLabelStreamlink   = "label.streamlink_path"
 	keyLabelFFmpeg       = "label.ffmpeg_path"
 	keyLabelProtocol     = "label.protocol"
-	keyLabelHost         = "label.host"
-	keyLabelPort         = "label.port"
-	keyLabelUsername     = "label.username"
-	keyLabelPassword     = "label.password"
+	keyLabelHostPort     = "label.host_port"
+	keyLabelUserPass     = "label.user_pass"
 	keyProxyEnable       = "label.enable_proxy"
 	keyPlaceholderOpt    = "placeholder.optional"
 	keyPlaceholderLink   = "placeholder.streamlink"
 	keyPlaceholderFFmpeg = "placeholder.ffmpeg"
 	keyFixedParams       = "label.fixed_params"
+	keyLogTitle          = "label.log_title"
 
 	keyBtnLaunch = "button.launch"
 	keyBtnStop   = "button.stop"
@@ -138,15 +137,14 @@ var messages = map[string][2]string{
 	keyLabelStreamlink:   {`streamlink 路径`, `Streamlink path`},
 	keyLabelFFmpeg:       {`ffmpeg 路径`, `FFmpeg path`},
 	keyLabelProtocol:     {`协议`, `Protocol`},
-	keyLabelHost:         {`主机`, `Host`},
-	keyLabelPort:         {`端口`, `Port`},
-	keyLabelUsername:     {`用户名`, `Username`},
-	keyLabelPassword:     {`密码`, `Password`},
+	keyLabelHostPort:     {`主机 / 端口`, `Host / Port`},
+	keyLabelUserPass:     {`用户名 / 密码`, `Username / Password`},
 	keyProxyEnable:       {`启用代理`, `Use proxy`},
 	keyPlaceholderOpt:    {`可选`, `Optional`},
 	keyPlaceholderLink:   {`留空自动检测，例如 /opt/homebrew/bin/streamlink`, `Leave empty to auto-detect, e.g. /opt/homebrew/bin/streamlink`},
 	keyPlaceholderFFmpeg: {`留空自动检测，例如 /opt/homebrew/bin/ffmpeg`, `Leave empty to auto-detect, e.g. /opt/homebrew/bin/ffmpeg`},
 	keyFixedParams:       {`固定参数：质量 %s，使用固定 Chrome User-Agent。`, `Fixed options: quality %s, fixed Chrome User-Agent.`},
+	keyLogTitle:          {`streamlink 输出`, `streamlink output`},
 
 	keyBtnLaunch: {`启动播放`, `Start Playback`},
 	keyBtnStop:   {`停止`, `Stop`},
