@@ -60,19 +60,15 @@ func languageFromName(name string) string {
 const (
 	keyAppTitle = "app.title"
 
-	keyLabelURL          = "label.url"
-	keyLabelPlayer       = "label.player"
-	keyLabelStreamlink   = "label.streamlink_path"
-	keyLabelFFmpeg       = "label.ffmpeg_path"
-	keyLabelProtocol     = "label.protocol"
-	keyLabelHostPort     = "label.host_port"
-	keyLabelUserPass     = "label.user_pass"
-	keyProxyEnable       = "label.enable_proxy"
-	keyPlaceholderOpt    = "placeholder.optional"
-	keyPlaceholderLink   = "placeholder.streamlink"
-	keyPlaceholderFFmpeg = "placeholder.ffmpeg"
-	keyFixedParams       = "label.fixed_params"
-	keyLogTitle          = "label.log_title"
+	keyLabelURL       = "label.url"
+	keyLabelPlayer    = "label.player"
+	keyLabelProtocol  = "label.protocol"
+	keyLabelHostPort  = "label.host_port"
+	keyLabelUserPass  = "label.user_pass"
+	keyProxyEnable    = "label.enable_proxy"
+	keyPlaceholderOpt = "placeholder.optional"
+	keyFixedParams    = "label.fixed_params"
+	keyLogTitle       = "label.log_title"
 
 	keyBtnLaunch = "button.launch"
 	keyBtnStop   = "button.stop"
@@ -109,42 +105,34 @@ const (
 	keyCfgMarshal = "config.marshal"
 	keyCfgWrite   = "config.write"
 
-	keyURLRequired       = "launch.url_required"
-	keyURLParse          = "launch.url_parse"
-	keyURLNoHost         = "launch.url_no_host"
-	keyProxyHostMissing  = "launch.proxy_host_missing"
-	keyProxyPortMissing  = "launch.proxy_port_missing"
-	keyProxyPortInvalid  = "launch.proxy_port_invalid"
-	keyProxyHostInvalid  = "launch.proxy_host_invalid"
-	keyLinkPathInvalid   = "launch.streamlink_path_invalid"
-	keyFFmpegPathInvalid = "launch.ffmpeg_path_invalid"
-	keyPathEntry         = "launch.path_entry"
-	keyLinkNotFound      = "launch.streamlink_not_found"
-	keyFFmpegNotFound    = "launch.ffmpeg_not_found"
-	keyNotInPath         = "launch.not_in_path"
-	keyIsDirectory       = "launch.is_directory"
-	keyNotRunning        = "launch.not_running"
-	keyStartFailed       = "launch.start_failed"
-	keyPlayerNotFound    = "player.not_found"
+	keyURLRequired      = "launch.url_required"
+	keyURLParse         = "launch.url_parse"
+	keyURLNoHost        = "launch.url_no_host"
+	keyProxyHostMissing = "launch.proxy_host_missing"
+	keyProxyPortMissing = "launch.proxy_port_missing"
+	keyProxyPortInvalid = "launch.proxy_port_invalid"
+	keyProxyHostInvalid = "launch.proxy_host_invalid"
+	keyPathEntry        = "launch.path_entry"
+	keyLinkNotFound     = "launch.streamlink_not_found"
+	keyFFmpegNotFound   = "launch.ffmpeg_not_found"
+	keyNotRunning       = "launch.not_running"
+	keyStartFailed      = "launch.start_failed"
+	keyPlayerNotFound   = "player.not_found"
 )
 
 // messages 保存每条界面文案的简体中文和英文版本：[0] 中文，[1] 英文。
 var messages = map[string][2]string{
 	keyAppTitle: {`Streamlink 播放器`, `Streamlink Player`},
 
-	keyLabelURL:          {`播放地址`, `Playback URL`},
-	keyLabelPlayer:       {`播放器`, `Player`},
-	keyLabelStreamlink:   {`streamlink 路径`, `Streamlink path`},
-	keyLabelFFmpeg:       {`ffmpeg 路径`, `FFmpeg path`},
-	keyLabelProtocol:     {`协议`, `Protocol`},
-	keyLabelHostPort:     {`主机 / 端口`, `Host / Port`},
-	keyLabelUserPass:     {`用户名 / 密码`, `Username / Password`},
-	keyProxyEnable:       {`启用代理`, `Use proxy`},
-	keyPlaceholderOpt:    {`可选`, `Optional`},
-	keyPlaceholderLink:   {`留空自动检测，例如 /opt/homebrew/bin/streamlink`, `Leave empty to auto-detect, e.g. /opt/homebrew/bin/streamlink`},
-	keyPlaceholderFFmpeg: {`留空自动检测，例如 /opt/homebrew/bin/ffmpeg`, `Leave empty to auto-detect, e.g. /opt/homebrew/bin/ffmpeg`},
-	keyFixedParams:       {`固定参数：质量 %s，使用固定 Chrome User-Agent。`, `Fixed options: quality %s, fixed Chrome User-Agent.`},
-	keyLogTitle:          {`streamlink 输出`, `streamlink output`},
+	keyLabelURL:       {`播放地址`, `Playback URL`},
+	keyLabelPlayer:    {`播放器`, `Player`},
+	keyLabelProtocol:  {`协议`, `Protocol`},
+	keyLabelHostPort:  {`主机 / 端口`, `Host / Port`},
+	keyLabelUserPass:  {`用户名 / 密码`, `Username / Password`},
+	keyProxyEnable:    {`启用代理`, `Use proxy`},
+	keyPlaceholderOpt: {`可选`, `Optional`},
+	keyFixedParams:    {`固定参数：质量 %s，使用固定 Chrome User-Agent。`, `Fixed options: quality %s, fixed Chrome User-Agent.`},
+	keyLogTitle:       {`streamlink 输出`, `streamlink output`},
 
 	keyBtnLaunch: {`启动播放`, `Start Playback`},
 	keyBtnStop:   {`停止`, `Stop`},
@@ -181,43 +169,41 @@ var messages = map[string][2]string{
 	keyCfgMarshal: {`序列化配置失败：%w`, `Failed to encode config: %w`},
 	keyCfgWrite:   {`写入配置文件 %s 失败：%w`, `Failed to write config file %s: %w`},
 
-	keyURLRequired:       {`请输入要播放的 URL。`, `Please enter a URL to play.`},
-	keyURLParse:          {`URL 无法解析：%v`, `Cannot parse the URL: %v`},
-	keyURLNoHost:         {`URL 缺少主机名：%s`, `The URL has no host name: %s`},
-	keyProxyHostMissing:  {`已启用代理，但未填写代理主机（host）。`, `Proxy is enabled, but the proxy host is empty.`},
-	keyProxyPortMissing:  {`已启用代理，但未填写代理端口。`, `Proxy is enabled, but the proxy port is empty.`},
-	keyProxyPortInvalid:  {`代理端口无效：%q，应为 1-65535 之间的数字。`, `Invalid proxy port: %q; expected a number between 1 and 65535.`},
-	keyProxyHostInvalid:  {`代理主机格式无效：%q。`, `Invalid proxy host: %q.`},
-	keyLinkPathInvalid:   {`指定的 streamlink 路径不可用：%s\n%v`, `The specified streamlink path is not usable: %s\n%v`},
-	keyFFmpegPathInvalid: {`指定的 ffmpeg 路径不可用：%s\n%v`, `The specified ffmpeg path is not usable: %s\n%v`},
-	keyPathEntry:         {`PATH 中的 %s（当前 PATH：%s）`, `%s in PATH (current PATH: %s)`},
-	keyLinkNotFound: {`未找到 streamlink 可执行文件。已检查：\n  %s\n\n从 Finder/Dock 启动的应用不会继承终端的 PATH，Homebrew 安装的 streamlink 可能因此找不到。` +
-		`\n可在界面的「streamlink 路径」中填写可执行文件绝对路径，或先安装：\n` +
+	keyURLRequired:      {`请输入要播放的 URL。`, `Please enter a URL to play.`},
+	keyURLParse:         {`URL 无法解析：%v`, `Cannot parse the URL: %v`},
+	keyURLNoHost:        {`URL 缺少主机名：%s`, `The URL has no host name: %s`},
+	keyProxyHostMissing: {`已启用代理，但未填写代理主机（host）。`, `Proxy is enabled, but the proxy host is empty.`},
+	keyProxyPortMissing: {`已启用代理，但未填写代理端口。`, `Proxy is enabled, but the proxy port is empty.`},
+	keyProxyPortInvalid: {`代理端口无效：%q，应为 1-65535 之间的数字。`, `Invalid proxy port: %q; expected a number between 1 and 65535.`},
+	keyProxyHostInvalid: {`代理主机格式无效：%q。`, `Invalid proxy host: %q.`},
+	keyPathEntry:        {`PATH 中的 %s（当前 PATH：%s）`, `%s in PATH (current PATH: %s)`},
+	keyLinkNotFound: {`未找到 streamlink 可执行文件。已检查：\n  %s\n\n` +
+		`请安装 streamlink，或将可执行文件所在目录加入 PATH 环境变量后重试：\n` +
 		`  Windows: pip install -U streamlink（或使用官方安装包）\n` +
 		`  macOS:   brew install streamlink\n` +
-		`  Linux:   发行版包管理器，或 pipx install streamlink`,
+		`  Linux:   发行版包管理器，或 pipx install streamlink\n\n` +
+		`注意：从 Finder/Dock 启动的应用不会继承终端的 PATH，若 streamlink 装在终端 PATH 中（如 pyenv/conda 环境），` +
+		`需把该目录加入系统 PATH 后重新启动本程序。`,
 		`streamlink executable not found. Checked:\n  %s\n\n` +
-			`Apps launched from Finder/Dock do not inherit the terminal PATH, so a Homebrew-installed streamlink may not be found.` +
-			`\nEnter the absolute path in the "Streamlink path" field, or install it first:\n` +
+			`Install streamlink, or add its directory to the PATH environment variable and try again:\n` +
 			`  Windows: pip install -U streamlink (or use the official installer)\n` +
 			`  macOS:   brew install streamlink\n` +
-			`  Linux:   your distribution package manager, or pipx install streamlink`},
-	keyFFmpegNotFound: {`未找到 ffmpeg 可执行文件。启动参数 --ffmpeg-copyts 依赖 ffmpeg，请先安装并确保它在 PATH 中。已检查：\n  %s\n` +
-		`可在界面的「ffmpeg 路径」中填写可执行文件绝对路径。\n\n安装方式：\n` +
+			`  Linux:   your distribution package manager, or pipx install streamlink\n\n` +
+			`Note: apps launched from Finder/Dock do not inherit the terminal PATH. If streamlink is installed in your terminal PATH (e.g. a pyenv/conda environment), add that directory to the system PATH and restart this app.`},
+	keyFFmpegNotFound: {`未找到 ffmpeg 可执行文件。启动参数 --ffmpeg-copyts 依赖 ffmpeg。已检查：\n  %s\n\n` +
+		`请安装 ffmpeg，或将可执行文件所在目录加入 PATH 环境变量后重试：\n` +
 		`  Windows: winget install ffmpeg（或从 https://ffmpeg.org 下载后把 bin 目录加入 PATH）\n` +
 		`  macOS:   brew install ffmpeg\n` +
 		`  Linux:   发行版包管理器，如 sudo apt install ffmpeg`,
-		`ffmpeg executable not found. The --ffmpeg-copyts option requires ffmpeg; install it and make sure it is in PATH. Checked:\n  %s\n` +
-			`Enter the absolute path in the "FFmpeg path" field.\n\nInstallation:\n` +
+		`ffmpeg executable not found. The --ffmpeg-copyts option requires ffmpeg. Checked:\n  %s\n\n` +
+			`Install ffmpeg, or add its directory to the PATH environment variable and try again:\n` +
 			`  Windows: winget install ffmpeg (or download from https://ffmpeg.org and add its bin directory to PATH)\n` +
 			`  macOS:   brew install ffmpeg\n` +
 			`  Linux:   your distribution package manager, e.g. sudo apt install ffmpeg`},
-	keyNotInPath:   {`未在 PATH 中找到 %q`, `%q not found in PATH`},
-	keyIsDirectory: {`这是一个目录，不是可执行文件`, `This is a directory, not an executable file`},
 	keyNotRunning:  {`streamlink 未在运行`, `streamlink is not running`},
 	keyStartFailed: {`启动 streamlink 失败：%w`, `Failed to start streamlink: %w`},
-	keyPlayerNotFound: {`未找到播放器 %s。已检查以下位置：\n  %s\n\n请安装该播放器，或在界面中选择其它播放器。`,
-		`Player %s not found. Checked the following locations:\n  %s\n\nInstall the player, or select a different one in the UI.`},
+	keyPlayerNotFound: {`未找到播放器 %s。已检查以下位置：\n  %s\n\n请安装该播放器，或将可执行文件所在目录加入 PATH 环境变量，也可以在界面中选择其它播放器。`,
+		`Player %s not found. Checked the following locations:\n  %s\n\nInstall the player, add its directory to the PATH environment variable, or select a different one in the UI.`},
 }
 
 // tf 返回当前语言的文案模板，供 fmt.Errorf 等需要保留格式动词的场合使用。

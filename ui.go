@@ -27,23 +27,21 @@ type launcherUI struct {
 
 	players []Player
 
-	urlEntry    *widget.Entry
-	proxyCheck  *widget.Check
-	protocol    *widget.Select
-	hostEntry   *widget.Entry
-	portEntry   *widget.Entry
-	userEntry   *widget.Entry
-	passEntry   *widget.Entry
-	playerSel   *widget.Select
-	linkEntry   *widget.Entry
-	ffmpegEntry *widget.Entry
-	launchBtn   *widget.Button
-	stopBtn     *widget.Button
-	status      *widget.Label
-	configInfo  *widget.Label
-	logTitle    *widget.Label
-	logGrid     *widget.TextGrid
-	logScroll   *container.Scroll
+	urlEntry   *widget.Entry
+	proxyCheck *widget.Check
+	protocol   *widget.Select
+	hostEntry  *widget.Entry
+	portEntry  *widget.Entry
+	userEntry  *widget.Entry
+	passEntry  *widget.Entry
+	playerSel  *widget.Select
+	launchBtn  *widget.Button
+	stopBtn    *widget.Button
+	status     *widget.Label
+	configInfo *widget.Label
+	logTitle   *widget.Label
+	logGrid    *widget.TextGrid
+	logScroll  *container.Scroll
 
 	proc *runningProcess
 
@@ -91,9 +89,6 @@ func newUI(w fyne.Window) *launcherUI {
 		names[i] = p.Name
 	}
 	u.playerSel = widget.NewSelect(names, nil)
-
-	u.linkEntry = widget.NewEntry()
-	u.ffmpegEntry = widget.NewEntry()
 
 	u.launchBtn = widget.NewButton("", u.launch)
 	u.launchBtn.Importance = widget.HighImportance
@@ -198,8 +193,6 @@ func (u *launcherUI) content() fyne.CanvasObject {
 	u.urlForm = widget.NewForm(
 		widget.NewFormItem("", u.urlEntry),
 		widget.NewFormItem("", u.playerSel),
-		widget.NewFormItem("", u.linkEntry),
-		widget.NewFormItem("", u.ffmpegEntry),
 	)
 	// 主机与端口、用户名与密码各占一行，减少表单高度占用。
 	u.proxyForm = widget.NewForm(
@@ -254,12 +247,10 @@ func (u *launcherUI) applyTexts() {
 	u.proxyCheck.Refresh()
 	u.userEntry.SetPlaceHolder(t(keyPlaceholderOpt))
 	u.passEntry.SetPlaceHolder(t(keyPlaceholderOpt))
-	u.linkEntry.SetPlaceHolder(t(keyPlaceholderLink))
-	u.ffmpegEntry.SetPlaceHolder(t(keyPlaceholderFFmpeg))
 	u.launchBtn.SetText(t(keyBtnLaunch))
 	u.stopBtn.SetText(t(keyBtnStop))
 
-	setFormTexts(u.urlForm, t(keyLabelURL), t(keyLabelPlayer), t(keyLabelStreamlink), t(keyLabelFFmpeg))
+	setFormTexts(u.urlForm, t(keyLabelURL), t(keyLabelPlayer))
 	setFormTexts(u.proxyForm, t(keyLabelProtocol), t(keyLabelHostPort), t(keyLabelUserPass))
 
 	u.fixed.SetText(t(keyFixedParams, qualityOptions))
@@ -307,8 +298,6 @@ func (u *launcherUI) applyConfig(cfg Config) {
 	u.portEntry.SetText(cfg.ProxyPort)
 	u.userEntry.SetText(cfg.ProxyUsername)
 	u.passEntry.SetText(cfg.ProxyPassword)
-	u.linkEntry.SetText(cfg.StreamlinkPath)
-	u.ffmpegEntry.SetText(cfg.FFmpegPath)
 
 	if cfg.ProxyProtocol == proxyProtocolSOCKS5 {
 		u.protocol.SetSelected(protocolLabelSOCKS5)
@@ -355,16 +344,14 @@ func (u *launcherUI) snapshot() Config {
 	}
 
 	cfg := Config{
-		URL:            u.urlEntry.Text,
-		UseProxy:       u.proxyCheck.Checked,
-		ProxyProtocol:  protocol,
-		ProxyHost:      u.hostEntry.Text,
-		ProxyPort:      u.portEntry.Text,
-		ProxyUsername:  u.userEntry.Text,
-		ProxyPassword:  u.passEntry.Text,
-		StreamlinkPath: u.linkEntry.Text,
-		FFmpegPath:     u.ffmpegEntry.Text,
-		Language:       currentLang,
+		URL:           u.urlEntry.Text,
+		UseProxy:      u.proxyCheck.Checked,
+		ProxyProtocol: protocol,
+		ProxyHost:     u.hostEntry.Text,
+		ProxyPort:     u.portEntry.Text,
+		ProxyUsername: u.userEntry.Text,
+		ProxyPassword: u.passEntry.Text,
+		Language:      currentLang,
 	}
 	if player, ok := u.selectedPlayer(); ok {
 		cfg.Player = player.ID
@@ -400,13 +387,13 @@ func (u *launcherUI) launch() {
 		return
 	}
 
-	streamlinkPath, err := findStreamlink(cfg.StreamlinkPath)
+	streamlinkPath, err := findStreamlink()
 	if err != nil {
 		u.fail(t(keyFailTitleLink), err.Error())
 		return
 	}
 
-	ffmpegPath, err := findFFmpeg(cfg.FFmpegPath)
+	ffmpegPath, err := findFFmpeg()
 	if err != nil {
 		u.fail(t(keyFailTitleFFmpeg), err.Error())
 		return

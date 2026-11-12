@@ -22,10 +22,6 @@ type Config struct {
 	ProxyUsername string `json:"proxy_username"`
 	ProxyPassword string `json:"proxy_password"`
 	Player        string `json:"player"`
-	// StreamlinkPath 为空时按平台候选路径和 PATH 自动查找。
-	StreamlinkPath string `json:"streamlink_path"`
-	// FFmpegPath 为空时按平台候选路径和 PATH 自动查找。
-	FFmpegPath string `json:"ffmpeg_path"`
 	// Language 为界面语言，取值为 zh 或 en。
 	Language string `json:"language"`
 }

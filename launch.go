@@ -136,17 +136,8 @@ func streamlinkCandidates() []string {
 	return candidates
 }
 
-// findStreamlink 按“用户指定路径 → 平台常见安装位置 → PATH”的顺序查找 streamlink。
-func findStreamlink(custom string) (string, error) {
-	custom = strings.TrimSpace(custom)
-	if custom != "" {
-		path, err := resolveExecutable(custom)
-		if err != nil {
-			return "", fmt.Errorf(tf(keyLinkPathInvalid), custom, err)
-		}
-		return path, nil
-	}
-
+// findStreamlink 按“平台常见安装位置 → PATH”的顺序查找 streamlink。
+func findStreamlink() (string, error) {
 	candidates := streamlinkCandidates()
 	for _, candidate := range candidates {
 		if info, err := os.Stat(candidate); err == nil && !info.IsDir() {
@@ -160,26 +151,6 @@ func findStreamlink(custom string) (string, error) {
 
 	checked := append(candidates, t(keyPathEntry, streamlinkBinary, os.Getenv("PATH")))
 	return "", errors.New(t(keyLinkNotFound, strings.Join(checked, "\n  ")))
-}
-
-// resolveExecutable 校验用户指定的路径；允许绝对路径或 PATH 中的可执行文件名。
-func resolveExecutable(custom string) (string, error) {
-	if !filepath.IsAbs(custom) {
-		path, err := exec.LookPath(custom)
-		if err != nil {
-			return "", fmt.Errorf(tf(keyNotInPath), custom)
-		}
-		return path, nil
-	}
-
-	info, err := os.Stat(custom)
-	if err != nil {
-		return "", err
-	}
-	if info.IsDir() {
-		return "", errors.New(t(keyIsDirectory))
-	}
-	return custom, nil
 }
 
 // ffmpegCandidates 列出各平台常见的 ffmpeg 安装位置，原因同 streamlinkCandidates。
@@ -201,18 +172,9 @@ func ffmpegCandidates() []string {
 	return candidates
 }
 
-// findFFmpeg 按“用户指定路径 → 平台常见安装位置 → PATH”的顺序查找 ffmpeg。
+// findFFmpeg 按“平台常见安装位置 → PATH”的顺序查找 ffmpeg。
 // 启动参数包含 --ffmpeg-copyts，缺少 ffmpeg 时 streamlink 无法正常播放。
-func findFFmpeg(custom string) (string, error) {
-	custom = strings.TrimSpace(custom)
-	if custom != "" {
-		path, err := resolveExecutable(custom)
-		if err != nil {
-			return "", fmt.Errorf(tf(keyFFmpegPathInvalid), custom, err)
-		}
-		return path, nil
-	}
-
+func findFFmpeg() (string, error) {
 	candidates := ffmpegCandidates()
 	for _, candidate := range candidates {
 		if info, err := os.Stat(candidate); err == nil && !info.IsDir() {
