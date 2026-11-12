@@ -45,9 +45,21 @@ func darwinPlayers() []Player {
 
 	vlc := []string{"/Applications/VLC.app/Contents/MacOS/VLC", "vlc"}
 
+	mpv := []string{
+		"/opt/homebrew/bin/mpv",
+		"/usr/local/bin/mpv",
+		"/Applications/mpv.app/Contents/MacOS/mpv",
+	}
+	if home != "" {
+		mpv = append(mpv, filepath.Join(home, "Applications/mpv.app/Contents/MacOS/mpv"))
+	}
+	// mpv 读取 stdin 时会自动关闭终端控制，{playerinput} 在 stdin 模式下为 "-"。
+	mpv = append(mpv, "mpv")
+
 	return []Player{
 		{ID: "iina", Name: "IINA", Args: "{playerinput}-stdin", candidates: iina},
 		{ID: "vlc", Name: "VLC", Args: "--no-video-title-show", candidates: vlc},
+		{ID: "mpv", Name: "mpv", Args: "{playerinput}", candidates: mpv},
 	}
 }
 
@@ -71,9 +83,17 @@ func windowsPlayers() []Player {
 		"vlc",
 	}
 
+	mpv := []string{
+		under(pf, "mpv", "mpv.exe"),
+		under(pf86, "mpv", "mpv.exe"),
+		"mpv.exe",
+		"mpv",
+	}
+
 	return []Player{
 		{ID: "potplayer", Name: "PotPlayer", Args: "{playerinput}", candidates: pot},
 		{ID: "vlc", Name: "VLC", Args: "--no-video-title-show", candidates: vlc},
+		{ID: "mpv", Name: "mpv", Args: "{playerinput}", candidates: mpv},
 	}
 }
 
@@ -88,6 +108,17 @@ func linuxPlayers() []Player {
 				"/usr/local/bin/vlc",
 				"/snap/bin/vlc",
 				"vlc",
+			},
+		},
+		{
+			ID:   "mpv",
+			Name: "mpv",
+			Args: "{playerinput}",
+			candidates: []string{
+				"/usr/bin/mpv",
+				"/usr/local/bin/mpv",
+				"/snap/bin/mpv",
+				"mpv",
 			},
 		},
 	}

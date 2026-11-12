@@ -8,7 +8,7 @@
 - streamlink 路径可留空自动查找（常见安装位置 + `PATH`），也可手动指定。
 - ffmpeg 路径可留空自动查找（常见安装位置 + `PATH`），也可手动指定。
 - 可选代理：HTTP 或 SOCKS5，填写 `host:port`，可选用户名与密码。
-- 播放器候选按平台生成：macOS 为 IINA / VLC，Windows 为 PotPlayer / VLC，Linux 为 VLC。
+- 播放器候选按平台生成：macOS 为 IINA / VLC / mpv，Windows 为 PotPlayer / VLC / mpv，Linux 为 VLC / mpv。
 - 固定参数（不可配置）：
   - User-Agent：`Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36`
   - 质量：`best,720p,480p,worst`（streamlink 按顺序回退）
@@ -55,9 +55,12 @@ Fyne 依赖 cgo，必须启用 CGO（`CGO_ENABLED=1`，默认即是）。所需�
 | --- | --- | --- | --- |
 | macOS | IINA | `/Applications/IINA.app/Contents/MacOS/iina-cli`、`~/Applications/IINA.app/Contents/MacOS/iina-cli`，再退回 PATH 中的 `iina-cli` / `iina` | `{playerinput}-stdin`（stdin 模式下 `{playerinput}` 为 `-`，拼接后即 `--stdin`，IINA 从 stdin 管道播放） |
 | macOS | VLC | `/Applications/VLC.app/Contents/MacOS/VLC`，再退回 PATH 中的 `vlc` | `--no-video-title-show` |
+| macOS | mpv | `/opt/homebrew/bin/mpv`、`/usr/local/bin/mpv`、`/Applications/mpv.app/Contents/MacOS/mpv`、`~/Applications/mpv.app/Contents/MacOS/mpv`，再退回 PATH 中的 `mpv` | `{playerinput}`（streamlink 在 stdin 模式下传入 `-`，mpv 从标准输入播放，并自动关闭终端控制） |
 | Windows | PotPlayer | `%ProgramFiles%\DAUM\PotPlayer\PotPlayerMini64.exe`（或 `PotPlayerMini.exe`），以及 `%ProgramFiles(x86)%` 下的同名文件，再退回 PATH | `{playerinput}`（streamlink 在 stdin 模式下传入 `-`，PotPlayer 用 `-` 表示从标准输入播放） |
 | Windows | VLC | `%ProgramFiles%\VideoLAN\VLC\vlc.exe`、`%ProgramFiles(x86)%\VideoLAN\VLC\vlc.exe`，再退回 PATH 中的 `vlc.exe` | `--no-video-title-show` |
+| Windows | mpv | `%ProgramFiles%\mpv\mpv.exe`、`%ProgramFiles(x86)%\mpv\mpv.exe`，再退回 PATH 中的 `mpv.exe` / `mpv` | `{playerinput}`（streamlink 在 stdin 模式下传入 `-`，mpv 从标准输入播放） |
 | Linux | VLC | `/usr/bin/vlc`、`/usr/local/bin/vlc`、`/snap/bin/vlc`，再退回 PATH 中的 `vlc` | `--no-video-title-show` |
+| Linux | mpv | `/usr/bin/mpv`、`/usr/local/bin/mpv`、`/snap/bin/mpv`，再退回 PATH 中的 `mpv` | `{playerinput}`（streamlink 在 stdin 模式下传入 `-`，mpv 从标准输入播放） |
 
 ### 4. ffmpeg
 
