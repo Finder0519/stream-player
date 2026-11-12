@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"runtime"
 	"strings"
 
 	"fyne.io/fyne/v2"
@@ -113,7 +114,7 @@ func newUI(w fyne.Window) *launcherUI {
 }
 
 // setupTray 启用系统托盘。关闭窗口只隐藏窗口并保存配置，拉流在后台继续；
-// 左键点击托盘图标显示窗口，右键弹出菜单。
+// macOS 上单击菜单栏图标直接展开菜单，Windows/Linux 上单击图标显示窗口。
 func (u *launcherUI) setupTray(a fyne.App, w fyne.Window) {
 	da, ok := a.(desktop.App)
 	if !ok {
@@ -123,15 +124,18 @@ func (u *launcherUI) setupTray(a fyne.App, w fyne.Window) {
 	u.tray = da
 
 	da.SetSystemTrayIcon(fyne.NewStaticResource("icon.png", trayIconPNG))
-	// SetSystemTrayWindow 把左键绑定为显示窗口、右键绑定为弹出菜单，
-	// 同时会把关闭行为改成隐藏，因此这里重新设置以保留关闭时的配置保存。
-	da.SetSystemTrayWindow(w)
+	// SetSystemTrayWindow 会把左键绑定为显示窗口，同时把关闭行为改成隐藏。
+	// Fyne 没有提供「单击只弹菜单」的开关，macOS 上只能不调用它：
+	// 不设置托盘窗口时 systray 的单击默认展开菜单。关闭拦截改为下面自行设置。
+	if runtime.GOOS != "darwin" {
+		da.SetSystemTrayWindow(w)
+	}
 	w.SetCloseIntercept(func() {
 		_ = saveConfig(u.snapshot())
 		w.Hide()
 	})
 
-	// macOS 上窗口隐藏后点击程序坞图标同样唤回窗口，与左键点击托盘图标一致。
+	// macOS 上窗口隐藏后点击程序坞图标同样唤回窗口，与托盘菜单里的「打开窗口」一致。
 	installDockReopen(u.showWindow)
 
 	u.refreshTrayMenu()

@@ -13,7 +13,7 @@
   - User-Agent：`Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36`
   - 质量：`best,720p,480p,worst`（streamlink 按顺序回退）
 - 配置自动保存并在下次启动时回填。
-- 关闭窗口后隐藏到系统托盘，播放不中断；左键点击托盘图标显示窗口（macOS 上点击程序坞图标同样会重新显示窗口），右键菜单提供「打开窗口」「停止播放」「退出」。
+- 关闭窗口后隐藏到系统托盘，播放不中断；macOS 上单击菜单栏图标直接展开菜单（Windows/Linux 上单击托盘图标显示窗口），菜单提供「打开窗口」「停止播放」「退出」；macOS 上点击程序坞图标同样会重新显示窗口。
 - streamlink 缺失、播放器缺失、代理参数非法、streamlink 异常退出时都会在界面弹窗给出可读错误，并附上 stderr 末尾内容。
 
 ## 环境要求
@@ -162,8 +162,8 @@ streamlink --player <播放器路径> --player-args "<上面的参数>" \
 
 - 点击「启动播放」后该按钮禁用、「停止」按钮可用；点击「停止」会终止 streamlink 进程，streamlink 退出后播放器因 stdin 管道关闭而结束播放，状态栏显示「已停止播放」。
 - 播放器关闭、streamlink 正常退出后，「启动播放」恢复可用，状态栏显示「播放结束」。
-- 关闭窗口只是隐藏窗口并保存配置，streamlink 和播放器继续运行；左键点击托盘图标重新显示窗口。macOS 上点击程序坞中的图标也会重新显示窗口：Fyne 与底层 GLFW 都没有实现 `applicationShouldHandleReopen:hasVisibleWindows:`，程序在启动时给现有的 NSApplication delegate 动态补上该方法（见 `dock_darwin.m`）。
-- 托盘右键菜单：「打开窗口」显示主窗口，「停止播放」终止当前拉流（未播放时置灰），「退出」先结束 streamlink 再退出程序。程序通过其它方式退出时也会在生命周期回调里结束 streamlink，避免后台残留。
+- 关闭窗口只是隐藏窗口并保存配置，streamlink 和播放器继续运行。macOS 上单击菜单栏图标直接弹出托盘菜单，主窗口通过菜单里的「打开窗口」或点击程序坞图标唤回；Windows/Linux 上单击托盘图标直接显示窗口。macOS 上点击程序坞中的图标也会重新显示窗口：Fyne 与底层 GLFW 都没有实现 `applicationShouldHandleReopen:hasVisibleWindows:`，程序在启动时给现有的 NSApplication delegate 动态补上该方法（见 `dock_darwin.m`）。
+- 托盘菜单：「打开窗口」显示主窗口，「停止播放」终止当前拉流（未播放时置灰），「退出」先结束 streamlink 再退出程序。程序通过其它方式退出时也会在生命周期回调里结束 streamlink，避免后台残留。
 - Linux 桌面环境没有托盘宿主时（例如 GNOME 未安装 AppIndicator 扩展），图标可能不显示，此时关闭窗口后窗口会隐藏。
 - macOS / Linux 按单实例运行：重复启动不会出现第二个进程，新进程通过本地 socket 通知已有实例显示窗口后退出；socket 位于 `$XDG_RUNTIME_DIR`（未设置时用 `os.TempDir()`，macOS 即用户私有临时目录），文件权限 0600。macOS 从 Finder 启动 `.app` 本来也会由系统复用已有实例。
 - Windows 上按单实例运行：重复启动不会再出现第二个窗口、托盘图标或进程，新进程会通知已有实例显示窗口后立即退出。互斥体与通知事件都在 `Local\` 命名空间，只约束同一登录会话，不同 Windows 用户可以各开一个实例。
