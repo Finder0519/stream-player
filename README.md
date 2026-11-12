@@ -131,11 +131,14 @@ streamlink --player <播放器路径> --player-args "<上面的参数>" \
   "proxy_password": "",
   "player": "vlc",
   "streamlink_path": "",
-  "ffmpeg_path": ""
+  "ffmpeg_path": "",
+  "language": "zh"
 }
 ```
 
 配置在点击「启动播放」以及关闭窗口时写入，文件权限为 `0600`。代理密码以明文保存在该文件中，请自行注意目录权限。
+
+`language` 为界面语言，取值为 `zh`（简体中文）或 `en`（English）。主界面右上角的下拉框可随时切换，选择会立即保存；首次启动时按系统语言决定默认值（中文系统用简体中文，其余用英文）。
 
 ## 日志
 

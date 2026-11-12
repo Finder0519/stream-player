@@ -26,6 +26,8 @@ type Config struct {
 	StreamlinkPath string `json:"streamlink_path"`
 	// FFmpegPath 为空时按平台候选路径和 PATH 自动查找。
 	FFmpegPath string `json:"ffmpeg_path"`
+	// Language 为界面语言，取值为 zh 或 en。
+	Language string `json:"language"`
 }
 
 func defaultConfig() Config {
@@ -33,6 +35,7 @@ func defaultConfig() Config {
 	return Config{
 		ProxyProtocol: proxyProtocolHTTP,
 		Player:        players[0].ID,
+		Language:      defaultLanguage(),
 	}
 }
 
@@ -43,7 +46,7 @@ func defaultConfig() Config {
 func configPath() (string, error) {
 	base, err := os.UserConfigDir()
 	if err != nil {
-		return "", fmt.Errorf("无法定位用户配置目录：%w", err)
+		return "", fmt.Errorf(tf(keyCfgDir), err)
 	}
 	return filepath.Join(base, "stream-player", "config.json"), nil
 }
@@ -61,15 +64,16 @@ func loadConfig() (Config, error) {
 		if os.IsNotExist(err) {
 			return cfg, nil
 		}
-		return cfg, fmt.Errorf("读取配置文件 %s 失败：%w", path, err)
+		return cfg, fmt.Errorf(tf(keyCfgRead), path, err)
 	}
 
 	if err := json.Unmarshal(data, &cfg); err != nil {
-		return defaultConfig(), fmt.Errorf("配置文件 %s 格式错误，已使用默认设置：%w", path, err)
+		return defaultConfig(), fmt.Errorf(tf(keyCfgParse), path, err)
 	}
 	if cfg.ProxyProtocol != proxyProtocolSOCKS5 {
 		cfg.ProxyProtocol = proxyProtocolHTTP
 	}
+	cfg.Language = normalizeLanguage(cfg.Language)
 	return cfg, nil
 }
 
@@ -79,17 +83,17 @@ func saveConfig(cfg Config) error {
 		return err
 	}
 	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
-		return fmt.Errorf("创建配置目录失败：%w", err)
+		return fmt.Errorf(tf(keyCfgMkdir), err)
 	}
 
 	data, err := json.MarshalIndent(cfg, "", "  ")
 	if err != nil {
-		return fmt.Errorf("序列化配置失败：%w", err)
+		return fmt.Errorf(tf(keyCfgMarshal), err)
 	}
 	data = append(data, '\n')
 
 	if err := os.WriteFile(path, data, 0o600); err != nil {
-		return fmt.Errorf("写入配置文件 %s 失败：%w", path, err)
+		return fmt.Errorf(tf(keyCfgWrite), path, err)
 	}
 	return nil
 }

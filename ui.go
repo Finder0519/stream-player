@@ -42,11 +42,23 @@ type launcherUI struct {
 
 	proc *runningProcess
 
+	// runningPlayer 记录当前拉流使用的播放器名称，切换语言时用来重建状态文案。
+	runningPlayer string
+
+	// header、表单与固定参数说明需要随语言切换就地更新文字。
+	header    *widget.Label
+	urlForm   *widget.Form
+	proxyForm *widget.Form
+	fixed     *widget.Label
+
 	proxyFields []fyne.Disableable
 }
 
 func newUI(w fyne.Window) *launcherUI {
+	// 先用系统语言兜底，读到配置后再按用户保存的选择覆盖。
+	setLanguage(defaultLanguage())
 	cfg, loadErr := loadConfig()
+	setLanguage(cfg.Language)
 
 	u := &launcherUI{
 		win:     w,
@@ -56,7 +68,7 @@ func newUI(w fyne.Window) *launcherUI {
 	u.urlEntry = widget.NewEntry()
 	u.urlEntry.SetPlaceHolder("https://example.com/live")
 
-	u.proxyCheck = widget.NewCheck("启用代理", nil)
+	u.proxyCheck = widget.NewCheck("", nil)
 
 	u.protocol = widget.NewSelect([]string{protocolLabelHTTP, protocolLabelSOCKS5}, nil)
 	u.hostEntry = widget.NewEntry()
@@ -64,9 +76,7 @@ func newUI(w fyne.Window) *launcherUI {
 	u.portEntry = widget.NewEntry()
 	u.portEntry.SetPlaceHolder("7890")
 	u.userEntry = widget.NewEntry()
-	u.userEntry.SetPlaceHolder("可选")
 	u.passEntry = widget.NewPasswordEntry()
-	u.passEntry.SetPlaceHolder("可选")
 
 	u.proxyFields = []fyne.Disableable{u.protocol, u.hostEntry, u.portEntry, u.userEntry, u.passEntry}
 	u.proxyCheck.OnChanged = u.setProxyEnabled
@@ -78,26 +88,19 @@ func newUI(w fyne.Window) *launcherUI {
 	u.playerSel = widget.NewSelect(names, nil)
 
 	u.linkEntry = widget.NewEntry()
-	u.linkEntry.SetPlaceHolder("留空自动检测，例如 /opt/homebrew/bin/streamlink")
-
 	u.ffmpegEntry = widget.NewEntry()
-	u.ffmpegEntry.SetPlaceHolder("留空自动检测，例如 /opt/homebrew/bin/ffmpeg")
 
-	u.launchBtn = widget.NewButton("启动播放", u.launch)
+	u.launchBtn = widget.NewButton("", u.launch)
 	u.launchBtn.Importance = widget.HighImportance
 
-	u.stopBtn = widget.NewButton("停止", u.stop)
+	u.stopBtn = widget.NewButton("", u.stop)
 	u.stopBtn.Importance = widget.DangerImportance
 	u.stopBtn.Disable()
 
-	u.status = widget.NewLabel("待启动")
+	u.status = widget.NewLabel(t(keyStatusIdle))
 	u.status.Wrapping = fyne.TextWrapWord
 
-	path, err := configPath()
-	if err != nil {
-		path = err.Error()
-	}
-	u.configInfo = widget.NewLabelWithStyle("配置文件："+path, fyne.TextAlignLeading, fyne.TextStyle{Italic: true})
+	u.configInfo = widget.NewLabelWithStyle("", fyne.TextAlignLeading, fyne.TextStyle{Italic: true})
 	u.configInfo.Wrapping = fyne.TextWrapWord
 
 	u.applyConfig(cfg)
@@ -144,14 +147,14 @@ func (u *launcherUI) refreshTrayMenu() {
 		return
 	}
 
-	stopItem := fyne.NewMenuItem("停止播放", u.stop)
+	stopItem := fyne.NewMenuItem(t(keyTrayStop), u.stop)
 	stopItem.Disabled = u.proc == nil
 
-	quitItem := fyne.NewMenuItem("退出", u.quit)
+	quitItem := fyne.NewMenuItem(t(keyTrayQuit), u.quit)
 	quitItem.IsQuit = true // 告诉 Fyne 这就是退出项，避免再追加一个英文 Quit
 
-	u.tray.SetSystemTrayMenu(fyne.NewMenu("Stream Player",
-		fyne.NewMenuItem("打开窗口", u.showWindow),
+	u.tray.SetSystemTrayMenu(fyne.NewMenu(t(keyAppTitle),
+		fyne.NewMenuItem(t(keyTrayOpen), u.showWindow),
 		stopItem,
 		fyne.NewMenuItemSeparator(),
 		quitItem,
@@ -182,39 +185,100 @@ func (u *launcherUI) killRunning() {
 }
 
 func (u *launcherUI) content() fyne.CanvasObject {
-	header := widget.NewLabelWithStyle("Streamlink 播放器", fyne.TextAlignLeading, fyne.TextStyle{Bold: true})
+	u.header = widget.NewLabelWithStyle("", fyne.TextAlignLeading, fyne.TextStyle{Bold: true})
 
-	urlForm := widget.NewForm(
-		widget.NewFormItem("播放地址", u.urlEntry),
-		widget.NewFormItem("播放器", u.playerSel),
-		widget.NewFormItem("streamlink 路径", u.linkEntry),
-		widget.NewFormItem("ffmpeg 路径", u.ffmpegEntry),
+	u.urlForm = widget.NewForm(
+		widget.NewFormItem("", u.urlEntry),
+		widget.NewFormItem("", u.playerSel),
+		widget.NewFormItem("", u.linkEntry),
+		widget.NewFormItem("", u.ffmpegEntry),
 	)
-	proxyForm := widget.NewForm(
-		widget.NewFormItem("协议", u.protocol),
-		widget.NewFormItem("主机", u.hostEntry),
-		widget.NewFormItem("端口", u.portEntry),
-		widget.NewFormItem("用户名", u.userEntry),
-		widget.NewFormItem("密码", u.passEntry),
+	u.proxyForm = widget.NewForm(
+		widget.NewFormItem("", u.protocol),
+		widget.NewFormItem("", u.hostEntry),
+		widget.NewFormItem("", u.portEntry),
+		widget.NewFormItem("", u.userEntry),
+		widget.NewFormItem("", u.passEntry),
 	)
 
-	fixed := widget.NewLabel("固定参数：质量 " + qualityOptions + "，使用固定 Chrome User-Agent。")
-	fixed.Wrapping = fyne.TextWrapWord
+	u.fixed = widget.NewLabel("")
+	u.fixed.Wrapping = fyne.TextWrapWord
+
+	langSel := widget.NewSelect([]string{langNameZh, langNameEn}, func(name string) {
+		u.switchLanguage(languageFromName(name))
+	})
+	langSel.SetSelected(languageName(currentLang))
+
+	u.applyTexts()
 
 	body := container.NewVBox(
-		header,
-		urlForm,
+		container.NewBorder(nil, nil, nil, langSel, u.header),
+		u.urlForm,
 		widget.NewSeparator(),
 		u.proxyCheck,
-		proxyForm,
+		u.proxyForm,
 		widget.NewSeparator(),
-		fixed,
+		u.fixed,
 		container.NewGridWithColumns(2, u.launchBtn, u.stopBtn),
 		u.status,
 		widget.NewSeparator(),
 		u.configInfo,
 	)
 	return container.NewPadded(body)
+}
+
+// applyTexts 按当前语言更新所有静态界面文字。
+func (u *launcherUI) applyTexts() {
+	u.header.SetText(t(keyAppTitle))
+
+	u.proxyCheck.Text = t(keyProxyEnable)
+	u.proxyCheck.Refresh()
+	u.userEntry.SetPlaceHolder(t(keyPlaceholderOpt))
+	u.passEntry.SetPlaceHolder(t(keyPlaceholderOpt))
+	u.linkEntry.SetPlaceHolder(t(keyPlaceholderLink))
+	u.ffmpegEntry.SetPlaceHolder(t(keyPlaceholderFFmpeg))
+	u.launchBtn.SetText(t(keyBtnLaunch))
+	u.stopBtn.SetText(t(keyBtnStop))
+
+	setFormTexts(u.urlForm, t(keyLabelURL), t(keyLabelPlayer), t(keyLabelStreamlink), t(keyLabelFFmpeg))
+	setFormTexts(u.proxyForm, t(keyLabelProtocol), t(keyLabelHost), t(keyLabelPort), t(keyLabelUsername), t(keyLabelPassword))
+
+	u.fixed.SetText(t(keyFixedParams, qualityOptions))
+
+	path, err := configPath()
+	if err != nil {
+		path = err.Error()
+	}
+	u.configInfo.SetText(t(keyConfigInfo, path))
+}
+
+// setFormTexts 依次改写表单各行的标签文字，行数不足时忽略多余文字。
+func setFormTexts(form *widget.Form, texts ...string) {
+	for i := 0; i < len(form.Items) && i < len(texts); i++ {
+		form.Items[i].Text = texts[i]
+	}
+	form.Refresh()
+}
+
+// switchLanguage 切换界面语言：更新界面文字、托盘菜单并保存选择。
+func (u *launcherUI) switchLanguage(lang string) {
+	if normalizeLanguage(lang) == currentLang {
+		return
+	}
+	setLanguage(lang)
+	u.applyTexts()
+	u.refreshTrayMenu()
+
+	// 状态栏是动态文案，切换后按当前运行状态重新生成。
+	if u.proc != nil {
+		u.setStatus(t(keyStatusRunning, u.runningPlayer))
+	} else {
+		u.setStatus(t(keyStatusIdle))
+	}
+
+	if err := saveConfig(u.snapshot()); err != nil {
+		log.Printf("配置保存失败：%v", err)
+	}
 }
 
 func (u *launcherUI) applyConfig(cfg Config) {
@@ -280,6 +344,7 @@ func (u *launcherUI) snapshot() Config {
 		ProxyPassword:  u.passEntry.Text,
 		StreamlinkPath: u.linkEntry.Text,
 		FFmpegPath:     u.ffmpegEntry.Text,
+		Language:       currentLang,
 	}
 	if player, ok := u.selectedPlayer(); ok {
 		cfg.Player = player.ID
@@ -296,7 +361,7 @@ func (u *launcherUI) launch() {
 
 	streamURL, err := normalizeURL(cfg.URL)
 	if err != nil {
-		u.fail("无法启动", err.Error())
+		u.fail(t(keyFailTitleStart), err.Error())
 		return
 	}
 
@@ -304,32 +369,32 @@ func (u *launcherUI) launch() {
 	if cfg.UseProxy {
 		proxy, err = buildProxyConfig(cfg)
 		if err != nil {
-			u.fail("代理配置有误", err.Error())
+			u.fail(t(keyFailTitleProxy), err.Error())
 			return
 		}
 	}
 
 	player, ok := u.selectedPlayer()
 	if !ok {
-		u.fail("无法启动", "请选择播放器。")
+		u.fail(t(keyFailTitleStart), t(keySelectPlayer))
 		return
 	}
 
 	streamlinkPath, err := findStreamlink(cfg.StreamlinkPath)
 	if err != nil {
-		u.fail("缺少 streamlink", err.Error())
+		u.fail(t(keyFailTitleLink), err.Error())
 		return
 	}
 
 	ffmpegPath, err := findFFmpeg(cfg.FFmpegPath)
 	if err != nil {
-		u.fail("缺少 ffmpeg", err.Error())
+		u.fail(t(keyFailTitleFFmpeg), err.Error())
 		return
 	}
 
 	playerPath, err := player.Resolve()
 	if err != nil {
-		u.fail("缺少播放器", err.Error())
+		u.fail(t(keyFailTitlePlayer), err.Error())
 		return
 	}
 
@@ -337,7 +402,7 @@ func (u *launcherUI) launch() {
 
 	proc, err := startStreamlink(streamlinkPath, buildStreamlinkArgs(streamURL, player, playerPath, ffmpegPath, proxy))
 	if err != nil {
-		u.fail("启动失败", redact(err.Error(), proxy))
+		u.fail(t(keyFailTitleLaunch), redact(err.Error(), proxy))
 		return
 	}
 
@@ -348,13 +413,14 @@ func (u *launcherUI) launch() {
 	log.Printf("启动播放：streamlink=%s ffmpeg=%s 播放器=%s（%s） 代理=%s", streamlinkPath, ffmpegPath, player.Name, playerPath, proxyDesc)
 
 	u.proc = proc
+	u.runningPlayer = player.Name
 	u.launchBtn.Disable()
 	u.stopBtn.Enable()
 	u.refreshTrayMenu()
-	status := fmt.Sprintf("已启动 streamlink，播放器：%s。可点击「停止」结束本次播放。", player.Name)
+	status := t(keyStatusRunning, player.Name)
 	if saveErr != nil {
 		log.Printf("配置保存失败：%v", saveErr)
-		status += "（配置保存失败：" + saveErr.Error() + "）"
+		status += t(keyStatusConfigSaveFailed, saveErr.Error())
 	}
 	u.setStatus(status)
 
@@ -369,15 +435,15 @@ func (u *launcherUI) launch() {
 			u.stopBtn.Disable()
 			u.refreshTrayMenu()
 			if proc.stopped.Load() {
-				u.setStatus("已停止播放。")
+				u.setStatus(t(keyStatusStopped))
 				return
 			}
 			if waitErr != nil {
-				u.setStatus("streamlink 已退出，播放失败。")
-				u.fail("播放失败", redact(fmt.Sprintf("%v\n\n%s", waitErr, output), proxy))
+				u.setStatus(t(keyStatusFailed))
+				u.fail(t(keyFailTitlePlay), redact(fmt.Sprintf("%v\n\n%s", waitErr, output), proxy))
 				return
 			}
-			u.setStatus("播放结束。")
+			u.setStatus(t(keyStatusFinished))
 		})
 	}()
 }
@@ -388,16 +454,16 @@ func (u *launcherUI) stop() {
 	}
 	log.Printf("用户请求停止 streamlink")
 	u.stopBtn.Disable()
-	u.setStatus("正在停止 streamlink…")
+	u.setStatus(t(keyStatusStopping))
 	if err := u.proc.stop(); err != nil {
 		u.stopBtn.Enable()
-		u.fail("停止失败", err.Error())
+		u.fail(t(keyFailTitleStop), err.Error())
 	}
 }
 
 func (u *launcherUI) fail(title, message string) {
 	log.Printf("错误[%s]：%s", title, message)
-	u.setStatus(title + "：" + firstLine(message))
+	u.setStatus(t(keyStatusError, title, firstLine(message)))
 
 	label := widget.NewLabel(message)
 	label.Wrapping = fyne.TextWrapWord
@@ -405,7 +471,7 @@ func (u *launcherUI) fail(title, message string) {
 	scroll := container.NewVScroll(label)
 	scroll.SetMinSize(fyne.NewSize(440, 150))
 
-	d := dialog.NewCustom(title, "关闭", scroll, u.win)
+	d := dialog.NewCustom(title, t(keyDialogClose), scroll, u.win)
 	d.Resize(fyne.NewSize(500, 300))
 	d.Show()
 }

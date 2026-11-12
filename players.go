@@ -120,6 +120,5 @@ func (p Player) Resolve() (string, error) {
 		}
 	}
 
-	return "", fmt.Errorf("未找到播放器 %s。已检查以下位置：\n  %s\n\n请安装该播放器，或在界面中选择其它播放器。",
-		p.Name, strings.Join(checked, "\n  "))
+	return "", fmt.Errorf(tf(keyPlayerNotFound), p.Name, strings.Join(checked, "\n  "))
 }

@@ -62,22 +62,22 @@ func (p ProxyConfig) redactedURL() string {
 func normalizeURL(raw string) (string, error) {
 	raw = strings.TrimSpace(raw)
 	if raw == "" {
-		return "", errors.New("请输入要播放的 URL。")
+		return "", errors.New(t(keyURLRequired))
 	}
 
 	u, err := url.Parse(raw)
 	if err != nil {
-		return "", fmt.Errorf("URL 无法解析：%v", err)
+		return "", fmt.Errorf(tf(keyURLParse), err)
 	}
 	if u.Scheme == "" {
 		raw = "https://" + raw
 		u, err = url.Parse(raw)
 		if err != nil {
-			return "", fmt.Errorf("URL 无法解析：%v", err)
+			return "", fmt.Errorf(tf(keyURLParse), err)
 		}
 	}
 	if u.Host == "" {
-		return "", fmt.Errorf("URL 缺少主机名：%s", raw)
+		return "", fmt.Errorf(tf(keyURLNoHost), raw)
 	}
 	return raw, nil
 }
@@ -88,17 +88,17 @@ func buildProxyConfig(cfg Config) (*ProxyConfig, error) {
 	username := strings.TrimSpace(cfg.ProxyUsername)
 
 	if host == "" {
-		return nil, errors.New("已启用代理，但未填写代理主机（host）。")
+		return nil, errors.New(t(keyProxyHostMissing))
 	}
 	if port == "" {
-		return nil, errors.New("已启用代理，但未填写代理端口。")
+		return nil, errors.New(t(keyProxyPortMissing))
 	}
 	portNum, err := strconv.Atoi(port)
 	if err != nil || portNum < 1 || portNum > 65535 {
-		return nil, fmt.Errorf("代理端口无效：%q，应为 1-65535 之间的数字。", port)
+		return nil, fmt.Errorf(tf(keyProxyPortInvalid), port)
 	}
 	if strings.Contains(host, " ") {
-		return nil, fmt.Errorf("代理主机格式无效：%q。", host)
+		return nil, fmt.Errorf(tf(keyProxyHostInvalid), host)
 	}
 
 	protocol := proxyProtocolHTTP
@@ -142,7 +142,7 @@ func findStreamlink(custom string) (string, error) {
 	if custom != "" {
 		path, err := resolveExecutable(custom)
 		if err != nil {
-			return "", fmt.Errorf("指定的 streamlink 路径不可用：%s\n%v", custom, err)
+			return "", fmt.Errorf(tf(keyLinkPathInvalid), custom, err)
 		}
 		return path, nil
 	}
@@ -158,14 +158,8 @@ func findStreamlink(custom string) (string, error) {
 		return path, nil
 	}
 
-	checked := append(candidates, "PATH 中的 "+streamlinkBinary+"（当前 PATH："+os.Getenv("PATH")+"）")
-	return "", errors.New("未找到 streamlink 可执行文件。已检查：\n  " +
-		strings.Join(checked, "\n  ") +
-		"\n\n从 Finder/Dock 启动的应用不会继承终端的 PATH，Homebrew 安装的 streamlink 可能因此找不到。" +
-		"\n可在界面的「streamlink 路径」中填写可执行文件绝对路径，或先安装：\n" +
-		"  Windows: pip install -U streamlink（或使用官方安装包）\n" +
-		"  macOS:   brew install streamlink\n" +
-		"  Linux:   发行版包管理器，或 pipx install streamlink")
+	checked := append(candidates, t(keyPathEntry, streamlinkBinary, os.Getenv("PATH")))
+	return "", errors.New(t(keyLinkNotFound, strings.Join(checked, "\n  ")))
 }
 
 // resolveExecutable 校验用户指定的路径；允许绝对路径或 PATH 中的可执行文件名。
@@ -173,7 +167,7 @@ func resolveExecutable(custom string) (string, error) {
 	if !filepath.IsAbs(custom) {
 		path, err := exec.LookPath(custom)
 		if err != nil {
-			return "", fmt.Errorf("未在 PATH 中找到 %q", custom)
+			return "", fmt.Errorf(tf(keyNotInPath), custom)
 		}
 		return path, nil
 	}
@@ -183,7 +177,7 @@ func resolveExecutable(custom string) (string, error) {
 		return "", err
 	}
 	if info.IsDir() {
-		return "", errors.New("这是一个目录，不是可执行文件")
+		return "", errors.New(t(keyIsDirectory))
 	}
 	return custom, nil
 }
@@ -214,7 +208,7 @@ func findFFmpeg(custom string) (string, error) {
 	if custom != "" {
 		path, err := resolveExecutable(custom)
 		if err != nil {
-			return "", fmt.Errorf("指定的 ffmpeg 路径不可用：%s\n%v", custom, err)
+			return "", fmt.Errorf(tf(keyFFmpegPathInvalid), custom, err)
 		}
 		return path, nil
 	}
@@ -230,13 +224,8 @@ func findFFmpeg(custom string) (string, error) {
 		return path, nil
 	}
 
-	checked := append(candidates, "PATH 中的 "+ffmpegBinary+"（当前 PATH："+os.Getenv("PATH")+"）")
-	return "", errors.New("未找到 ffmpeg 可执行文件。启动参数 --ffmpeg-copyts 依赖 ffmpeg，请先安装并确保它在 PATH 中。已检查：\n  " +
-		strings.Join(checked, "\n  ") +
-		"\n可在界面的「ffmpeg 路径」中填写可执行文件绝对路径。\n\n安装方式：\n" +
-		"  Windows: winget install ffmpeg（或从 https://ffmpeg.org 下载后把 bin 目录加入 PATH）\n" +
-		"  macOS:   brew install ffmpeg\n" +
-		"  Linux:   发行版包管理器，如 sudo apt install ffmpeg")
+	checked := append(candidates, t(keyPathEntry, ffmpegBinary, os.Getenv("PATH")))
+	return "", errors.New(t(keyFFmpegNotFound, strings.Join(checked, "\n  ")))
 }
 
 func buildStreamlinkArgs(streamURL string, player Player, playerPath, ffmpegPath string, proxy *ProxyConfig) []string {
@@ -292,7 +281,7 @@ type runningProcess struct {
 func (p *runningProcess) stop() error {
 	p.stopped.Store(true)
 	if p.cmd.Process == nil {
-		return errors.New("streamlink 未在运行")
+		return errors.New(t(keyNotRunning))
 	}
 	return p.cmd.Process.Kill()
 }
@@ -305,7 +294,7 @@ func startStreamlink(streamlinkPath string, args []string) (*runningProcess, err
 	applyProcAttr(cmd)
 
 	if err := cmd.Start(); err != nil {
-		return nil, fmt.Errorf("启动 streamlink 失败：%w", err)
+		return nil, fmt.Errorf(tf(keyStartFailed), err)
 	}
 	return &runningProcess{cmd: cmd, output: output}, nil
 }
