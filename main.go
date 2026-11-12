@@ -10,7 +10,7 @@ import (
 	"fyne.io/fyne/v2/app"
 )
 
-//go:embed Icon.png
+//go:embed icon.png
 var trayIconPNG []byte
 
 func main() {
