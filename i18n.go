@@ -177,33 +177,35 @@ var messages = map[string][2]string{
 	keyProxyPortInvalid: {`代理端口无效：%q，应为 1-65535 之间的数字。`, `Invalid proxy port: %q; expected a number between 1 and 65535.`},
 	keyProxyHostInvalid: {`代理主机格式无效：%q。`, `Invalid proxy host: %q.`},
 	keyPathEntry:        {`PATH 中的 %s（当前 PATH：%s）`, `%s in PATH (current PATH: %s)`},
-	keyLinkNotFound: {`未找到 streamlink 可执行文件。已检查：\n  %s\n\n` +
-		`请安装 streamlink，或将可执行文件所在目录加入 PATH 环境变量后重试：\n` +
-		`  Windows: pip install -U streamlink（或使用官方安装包）\n` +
-		`  macOS:   brew install streamlink\n` +
-		`  Linux:   发行版包管理器，或 pipx install streamlink\n\n` +
-		`注意：从 Finder/Dock 启动的应用不会继承终端的 PATH，若 streamlink 装在终端 PATH 中（如 pyenv/conda 环境），` +
-		`需把该目录加入系统 PATH 后重新启动本程序。`,
-		`streamlink executable not found. Checked:\n  %s\n\n` +
-			`Install streamlink, or add its directory to the PATH environment variable and try again:\n` +
-			`  Windows: pip install -U streamlink (or use the official installer)\n` +
-			`  macOS:   brew install streamlink\n` +
-			`  Linux:   your distribution package manager, or pipx install streamlink\n\n` +
-			`Note: apps launched from Finder/Dock do not inherit the terminal PATH. If streamlink is installed in your terminal PATH (e.g. a pyenv/conda environment), add that directory to the system PATH and restart this app.`},
-	keyFFmpegNotFound: {`未找到 ffmpeg 可执行文件。启动参数 --ffmpeg-copyts 依赖 ffmpeg。已检查：\n  %s\n\n` +
-		`请安装 ffmpeg，或将可执行文件所在目录加入 PATH 环境变量后重试：\n` +
-		`  Windows: winget install ffmpeg（或从 https://ffmpeg.org 下载后把 bin 目录加入 PATH）\n` +
-		`  macOS:   brew install ffmpeg\n` +
-		`  Linux:   发行版包管理器，如 sudo apt install ffmpeg`,
-		`ffmpeg executable not found. The --ffmpeg-copyts option requires ffmpeg. Checked:\n  %s\n\n` +
-			`Install ffmpeg, or add its directory to the PATH environment variable and try again:\n` +
-			`  Windows: winget install ffmpeg (or download from https://ffmpeg.org and add its bin directory to PATH)\n` +
-			`  macOS:   brew install ffmpeg\n` +
-			`  Linux:   your distribution package manager, e.g. sudo apt install ffmpeg`},
+	keyLinkNotFound: {"未找到 streamlink 可执行文件。已检查：\n  %s\n\n" +
+		"请安装 streamlink，或将可执行文件所在目录加入 PATH 环境变量后重试：\n" +
+		"  Windows: pip install -U streamlink（或使用官方安装包）\n" +
+		"  macOS:   brew install streamlink\n" +
+		"  Linux:   发行版包管理器，或 pipx install streamlink\n\n" +
+		"注意：从 Finder/Dock 启动的应用不会继承终端的 PATH，若 streamlink 装在终端 PATH 中（如 pyenv/conda 环境），" +
+		"需把该目录加入系统 PATH 后重新启动本程序。",
+		"streamlink executable not found. Checked:\n  %s\n\n" +
+			"Install streamlink, or add its directory to the PATH environment variable and try again:\n" +
+			"  Windows: pip install -U streamlink (or use the official installer)\n" +
+			"  macOS:   brew install streamlink\n" +
+			"  Linux:   your distribution package manager, or pipx install streamlink\n\n" +
+			"Note: apps launched from Finder/Dock do not inherit the terminal PATH. If streamlink is installed in your terminal PATH (e.g. a pyenv/conda environment), add that directory to the system PATH and restart this app."},
+	keyFFmpegNotFound: {"未找到 ffmpeg 可执行文件。启动参数 --ffmpeg-copyts 依赖 ffmpeg。已检查：\n  %s\n\n" +
+		"请安装 ffmpeg，或将可执行文件所在目录加入 PATH 环境变量后重试：\n" +
+		"  Windows: winget install ffmpeg（或从 https://ffmpeg.org 下载后把 bin 目录加入 PATH）\n" +
+		"  macOS:   brew install ffmpeg\n" +
+		"  Linux:   发行版包管理器，如 sudo apt install ffmpeg",
+		"ffmpeg executable not found. The --ffmpeg-copyts option requires ffmpeg. Checked:\n  %s\n\n" +
+			"Install ffmpeg, or add its directory to the PATH environment variable and try again:\n" +
+			"  Windows: winget install ffmpeg (or download from https://ffmpeg.org and add its bin directory to PATH)\n" +
+			"  macOS:   brew install ffmpeg\n" +
+			"  Linux:   your distribution package manager, e.g. sudo apt install ffmpeg"},
 	keyNotRunning:  {`streamlink 未在运行`, `streamlink is not running`},
 	keyStartFailed: {`启动 streamlink 失败：%w`, `Failed to start streamlink: %w`},
-	keyPlayerNotFound: {`未找到播放器 %s。已检查以下位置：\n  %s\n\n请安装该播放器，或将可执行文件所在目录加入 PATH 环境变量，也可以在界面中选择其它播放器。`,
-		`Player %s not found. Checked the following locations:\n  %s\n\nInstall the player, add its directory to the PATH environment variable, or select a different one in the UI.`},
+	keyPlayerNotFound: {"未找到播放器 %s。已检查以下位置：\n  %s\n\n" +
+		"请安装该播放器，或将可执行文件所在目录加入 PATH 环境变量，也可以在界面中选择其它播放器。",
+		"Player %s not found. Checked the following locations:\n  %s\n\n" +
+			"Install the player, add its directory to the PATH environment variable, or select a different one in the UI."},
 }
 
 // tf 返回当前语言的文案模板，供 fmt.Errorf 等需要保留格式动词的场合使用。
