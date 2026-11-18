@@ -115,6 +115,15 @@ func buildProxyConfig(cfg Config) (*ProxyConfig, error) {
 	}, nil
 }
 
+// programFilesDir 返回 Windows 的 Program Files 目录（%ProgramFiles%），
+// 环境变量缺失时退回默认路径。
+func programFilesDir() string {
+	if dir := os.Getenv("ProgramFiles"); dir != "" {
+		return dir
+	}
+	return `C:\Program Files`
+}
+
 // streamlinkCandidates 列出各平台常见的 streamlink 安装位置。
 // 从 Finder/Dock 启动的 .app 不会继承终端的 PATH（launchd 默认只有
 // /usr/bin:/bin:/usr/sbin:/sbin），因此 Homebrew 等目录需要直接探测。
@@ -127,6 +136,9 @@ func streamlinkCandidates() []string {
 		candidates = []string{"/opt/homebrew/bin/streamlink", "/usr/local/bin/streamlink"}
 	case "linux":
 		candidates = []string{"/usr/bin/streamlink", "/usr/local/bin/streamlink", "/snap/bin/streamlink"}
+	case "windows":
+		// Windows 官方安装包默认装在该目录；PATH 优先，这里只作兜底。
+		return []string{filepath.Join(programFilesDir(), "Streamlink", "bin", "streamlink.exe")}
 	default:
 		return nil
 	}
@@ -134,23 +146,6 @@ func streamlinkCandidates() []string {
 		candidates = append(candidates, filepath.Join(home, ".local/bin/streamlink"))
 	}
 	return candidates
-}
-
-// findStreamlink 按“平台常见安装位置 → PATH”的顺序查找 streamlink。
-func findStreamlink() (string, error) {
-	candidates := streamlinkCandidates()
-	for _, candidate := range candidates {
-		if info, err := os.Stat(candidate); err == nil && !info.IsDir() {
-			return candidate, nil
-		}
-	}
-
-	if path, err := exec.LookPath(streamlinkBinary); err == nil {
-		return path, nil
-	}
-
-	checked := append(candidates, t(keyPathEntry, streamlinkBinary, os.Getenv("PATH")))
-	return "", errors.New(t(keyLinkNotFound, strings.Join(checked, "\n  ")))
 }
 
 // ffmpegCandidates 列出各平台常见的 ffmpeg 安装位置，原因同 streamlinkCandidates。
@@ -163,6 +158,9 @@ func ffmpegCandidates() []string {
 		candidates = []string{"/opt/homebrew/bin/ffmpeg", "/usr/local/bin/ffmpeg"}
 	case "linux":
 		candidates = []string{"/usr/bin/ffmpeg", "/usr/local/bin/ffmpeg", "/snap/bin/ffmpeg"}
+	case "windows":
+		// Windows 官方安装包自带的 ffmpeg；PATH 优先，这里只作兜底。
+		return []string{filepath.Join(programFilesDir(), "Streamlink", "ffmpeg", "ffmpeg.exe")}
 	default:
 		return nil
 	}
@@ -172,22 +170,51 @@ func ffmpegCandidates() []string {
 	return candidates
 }
 
-// findFFmpeg 按“平台常见安装位置 → PATH”的顺序查找 ffmpeg。
-// 启动参数包含 --ffmpeg-copyts，缺少 ffmpeg 时 streamlink 无法正常播放。
-func findFFmpeg() (string, error) {
-	candidates := ffmpegCandidates()
-	for _, candidate := range candidates {
-		if info, err := os.Stat(candidate); err == nil && !info.IsDir() {
-			return candidate, nil
+// findExecutable 查找可执行文件。Windows 上 PATH（环境变量）优先，找不到再试
+// 固定安装路径；其它平台顺序相反：先试固定安装路径，再回退到 PATH。
+func findExecutable(name string, candidates []string, errKey string) (string, error) {
+	lookPath := func() (string, bool) {
+		path, err := exec.LookPath(name)
+		return path, err == nil
+	}
+	findCandidate := func() (string, bool) {
+		for _, candidate := range candidates {
+			if info, err := os.Stat(candidate); err == nil && !info.IsDir() {
+				return candidate, true
+			}
+		}
+		return "", false
+	}
+
+	if runtime.GOOS == "windows" {
+		if path, ok := lookPath(); ok {
+			return path, nil
+		}
+		if path, ok := findCandidate(); ok {
+			return path, nil
+		}
+	} else {
+		if path, ok := findCandidate(); ok {
+			return path, nil
+		}
+		if path, ok := lookPath(); ok {
+			return path, nil
 		}
 	}
 
-	if path, err := exec.LookPath(ffmpegBinary); err == nil {
-		return path, nil
-	}
+	checked := append(candidates, t(keyPathEntry, name, os.Getenv("PATH")))
+	return "", errors.New(t(errKey, strings.Join(checked, "\n  ")))
+}
 
-	checked := append(candidates, t(keyPathEntry, ffmpegBinary, os.Getenv("PATH")))
-	return "", errors.New(t(keyFFmpegNotFound, strings.Join(checked, "\n  ")))
+// findStreamlink 按平台约定顺序查找 streamlink。
+func findStreamlink() (string, error) {
+	return findExecutable(streamlinkBinary, streamlinkCandidates(), keyLinkNotFound)
+}
+
+// findFFmpeg 按平台约定顺序查找 ffmpeg。
+// 启动参数包含 --ffmpeg-copyts，缺少 ffmpeg 时 streamlink 无法正常播放。
+func findFFmpeg() (string, error) {
+	return findExecutable(ffmpegBinary, ffmpegCandidates(), keyFFmpegNotFound)
 }
 
 func buildStreamlinkArgs(streamURL string, player Player, playerPath, ffmpegPath string, proxy *ProxyConfig) []string {

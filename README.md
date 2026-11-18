@@ -36,7 +36,10 @@ Fyne 依赖 cgo，必须启用 CGO（`CGO_ENABLED=1`，默认即是）。所需�
 1. 平台常见安装位置：
    - macOS：`/opt/homebrew/bin/streamlink`、`/usr/local/bin/streamlink`、`~/.local/bin/streamlink`
    - Linux：`/usr/bin/streamlink`、`/usr/local/bin/streamlink`、`/snap/bin/streamlink`、`~/.local/bin/streamlink`
+   - Windows：`%ProgramFiles%\Streamlink\bin\streamlink.exe`（环境变量缺失时按 `C:\Program Files` 处理）
 2. `PATH` 中的 `streamlink`
+
+Windows 上顺序相反：先查 `PATH`（即环境变量），找不到再使用 `%ProgramFiles%\Streamlink\bin\streamlink.exe`。macOS / Linux 则先查上面的固定路径，再回退到 `PATH`。
 
 两者都找不到时弹窗提示：请安装 streamlink，或将可执行文件所在目录加入 `PATH` 环境变量（弹窗会列出检查过的路径和当前 `PATH`）。
 
@@ -70,7 +73,10 @@ Fyne 依赖 cgo，必须启用 CGO（`CGO_ENABLED=1`，默认即是）。所需�
 1. 平台常见安装位置：
    - macOS：`/opt/homebrew/bin/ffmpeg`、`/usr/local/bin/ffmpeg`、`~/.local/bin/ffmpeg`
    - Linux：`/usr/bin/ffmpeg`、`/usr/local/bin/ffmpeg`、`/snap/bin/ffmpeg`、`~/.local/bin/ffmpeg`
+   - Windows：`%ProgramFiles%\Streamlink\ffmpeg\ffmpeg.exe`（环境变量缺失时按 `C:\Program Files` 处理）
 2. `PATH` 中的 `ffmpeg`
+
+Windows 上同样先查 `PATH`，找不到再使用 `%ProgramFiles%\Streamlink\ffmpeg\ffmpeg.exe`。
 
 安装方式：
 
